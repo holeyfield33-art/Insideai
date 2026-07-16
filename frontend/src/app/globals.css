@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: #0b0e17;
+  --color-surface: #131722;
+  --color-raised: #1c2333;
+  --color-ink: #e9edf9;
+  --color-ink2: #a9b3ce;
+  --color-ink3: #6e7893;
+  --color-grid: #29314a;
+  --color-accent: #4d84ea;
+  --color-accent-track: #21315a;
+  --color-prompt-tok: #2aa35d;
+  --color-gen-tok: #e0564f;
+  --color-active: #cc7d0a;
+  --color-danger: #e0564f;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+  overflow: hidden;
+}
+
+/* HUD card. */
+.glass {
+  background: rgba(19, 23, 34, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.glow-text {
+  color: var(--color-ink);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333c58;
+  border-radius: 9999px;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.pulse-soft {
+  animation: soft-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-soft {
+    animation: none;
+  }
+}
