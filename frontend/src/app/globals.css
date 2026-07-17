@@ -1,22 +1,65 @@
 @import "tailwindcss";
 
-@theme {
-  --color-page: #0b0e17;
-  --color-surface: #131722;
-  --color-raised: #1c2333;
-  --color-ink: #e9edf9;
-  --color-ink2: #a9b3ce;
-  --color-ink3: #6e7893;
-  --color-grid: #29314a;
-  --color-accent: #4d84ea;
-  --color-accent-track: #21315a;
-  --color-prompt-tok: #2aa35d;
-  --color-gen-tok: #e0564f;
-  --color-active: #cc7d0a;
-  --color-danger: #e0564f;
+/* Utilities reference the --t-* variables, which switch with [data-theme]. */
+@theme inline {
+  --color-page: var(--t-page);
+  --color-surface: var(--t-surface);
+  --color-raised: var(--t-raised);
+  --color-ink: var(--t-ink);
+  --color-ink2: var(--t-ink2);
+  --color-ink3: var(--t-ink3);
+  --color-grid: var(--t-grid);
+  --color-accent: var(--t-accent);
+  --color-accent-track: var(--t-accent-track);
+  --color-prompt-tok: var(--t-prompt-tok);
+  --color-gen-tok: var(--t-gen-tok);
+  --color-active: var(--t-active);
+  --color-danger: var(--t-danger);
 
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+/* Dark (default) */
+:root {
+  --t-page: #0b0e17;
+  --t-surface: #131722;
+  --t-raised: #1c2333;
+  --t-ink: #e9edf9;
+  --t-ink2: #a9b3ce;
+  --t-ink3: #6e7893;
+  --t-grid: #29314a;
+  --t-accent: #4d84ea;
+  --t-accent-track: #21315a;
+  --t-prompt-tok: #2aa35d;
+  --t-gen-tok: #e0564f;
+  --t-active: #cc7d0a;
+  --t-danger: #e0564f;
+  --t-card-bg: rgba(19, 23, 34, 0.88);
+  --t-card-border: rgba(255, 255, 255, 0.09);
+  --t-card-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  --t-scrollbar: #333c58;
+}
+
+/* Light */
+:root[data-theme="light"] {
+  --t-page: #f4f6fb;
+  --t-surface: #ffffff;
+  --t-raised: #f1f4fa;
+  --t-ink: #17203a;
+  --t-ink2: #4c5670;
+  --t-ink3: #8a93ab;
+  --t-grid: #dfe4f0;
+  --t-accent: #2a5bd7;
+  --t-accent-track: #dbe5fb;
+  --t-prompt-tok: #0f8a3d;
+  --t-gen-tok: #d94343;
+  --t-active: #d97706;
+  --t-danger: #c02626;
+  --t-card-bg: rgba(255, 255, 255, 0.9);
+  --t-card-border: #d9deeb;
+  --t-card-shadow: 0 8px 24px rgba(23, 32, 58, 0.08);
+  --t-scrollbar: #c6cddf;
 }
 
 html,
@@ -25,22 +68,22 @@ body {
 }
 
 body {
-  background: var(--color-page);
-  color: var(--color-ink);
+  background: var(--t-page);
+  color: var(--t-ink);
   overflow: hidden;
 }
 
 /* HUD card. */
 .glass {
-  background: rgba(19, 23, 34, 0.88);
+  background: var(--t-card-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
 }
 
 .glow-text {
-  color: var(--color-ink);
+  color: var(--t-ink);
 }
 
 ::-webkit-scrollbar {
@@ -51,7 +94,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333c58;
+  background: var(--t-scrollbar);
   border-radius: 9999px;
 }
 

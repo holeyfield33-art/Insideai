@@ -19,10 +19,6 @@ const BASE_Y = 0.45;
 
 export const slabSpacing = (nLayer: number) => Math.min(1.15, 16 / Math.max(nLayer, 1));
 
-const COLOR_IDLE = new THREE.Color(scene.slabFill);
-const COLOR_BLUE = new THREE.Color("#5b89e6");
-const COLOR_ACTIVE = new THREE.Color(palette.active);
-
 export default function TransformerTower({ origin }: { origin: readonly [number, number, number] }) {
   const nLayer = useSimStore((s) => s.modelInfo?.n_layer ?? 0);
   const nEmbd = useSimStore((s) => s.modelInfo?.n_embd ?? 0);
@@ -36,6 +32,10 @@ export default function TransformerTower({ origin }: { origin: readonly [number,
 
   const slabGeo = useMemo(() => new THREE.BoxGeometry(5.4, 1, 5.4), []);
   const slabEdges = useMemo(() => new THREE.EdgesGeometry(slabGeo), [slabGeo]);
+  // Per mount — the scene remounts on theme change.
+  const COLOR_IDLE = useMemo(() => new THREE.Color(scene.slabFill), []);
+  const COLOR_BLUE = useMemo(() => new THREE.Color(scene.towerBlue), []);
+  const COLOR_ACTIVE = useMemo(() => new THREE.Color(palette.active), []);
 
   const slabH = slabSpacing(nLayer);
   const thickness = Math.min(0.72, slabH * 0.62);

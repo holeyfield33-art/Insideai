@@ -30,10 +30,10 @@ export default function Scene() {
       <color attach="background" args={[scene.background]} />
       <fog attach="fog" args={[scene.background, 90, 240]} />
 
-      <ambientLight intensity={0.85} />
-      <directionalLight position={[12, 30, 24]} intensity={0.5} color="#dfe6ff" />
+      <ambientLight intensity={scene.ambient} />
+      <directionalLight position={[12, 30, 24]} intensity={scene.directional} color="#ffffff" />
 
-      <gridHelper args={[220, 56, "#232b42", "#151b2a"]} position={[9, -3, 0]} />
+      <gridHelper args={[220, 56, scene.gridMajor, scene.gridMinor]} position={[9, -3, 0]} />
 
       <EmbeddingSpace origin={ZONE_ORIGIN.embedding} />
       <TokenVisualizer origin={ZONE_ORIGIN.attention} />

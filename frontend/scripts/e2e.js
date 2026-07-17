@@ -29,8 +29,8 @@ const problems = [];
   await page.goto(URL, { waitUntil: "domcontentloaded" });
 
   step("wait for model_info over websocket (model chip)");
-  await page.waitForSelector("text=/\\d+L · \\d+H/", { timeout: 30000 });
-  const chip = await page.textContent("text=/\\d+L · \\d+H/");
+  await page.waitForSelector("text=/\\d+ layers/", { timeout: 30000 });
+  const chip = await page.textContent("text=/\\d+ layers/");
   ok(`model chip shows "${chip?.trim()}" (WS model_info applied)`);
 
   await page.waitForSelector("text=live", { timeout: 15000 });

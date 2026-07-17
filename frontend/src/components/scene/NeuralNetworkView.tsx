@@ -16,6 +16,7 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import { visualizeToken } from "@/lib/format";
 import { palette, scene } from "@/lib/palette";
 import { useSimStore } from "@/lib/store";
 
@@ -26,18 +27,9 @@ const CY = 5.4; // vertical center of the diagram
 
 const EDGE_MIN = 0.06;
 
-const FULL = {
-  in: new THREE.Color(palette.promptToken),
-  hid: new THREE.Color(palette.accent),
-  out: new THREE.Color(palette.generatedToken),
-};
-const PALE = {
-  in: new THREE.Color(palette.surface).lerp(FULL.in, 0.25),
-  hid: new THREE.Color(palette.surface).lerp(FULL.hid, 0.25),
-  out: new THREE.Color(palette.surface).lerp(FULL.out, 0.25),
-};
-const EDGE_FAINT = new THREE.Color(scene.edgeFaint);
-const EDGE_STRONG = new THREE.Color(scene.edge);
+/** The three columns light up in order per token — the signal visibly
+ *  travels input → neurons → output instead of everything blinking at once. */
+const COLUMN_DELAY_S = { in: 0, hid: 0.3, out: 0.6 };
 
 function columnPositions(count: number, x: number): [number, number, number][] {
   const spacing = Math.min(0.95, 11 / Math.max(count, 1));
@@ -109,6 +101,7 @@ export default function NeuralNetworkView({ origin }: { origin: readonly [number
   const modelInfo = useSimStore((s) => s.modelInfo);
   const selectedLayer = useSimStore((s) => s.selectedLayer);
   const ffnAll = useSimStore((s) => s.ffn);
+  const lastToken = useSimStore((s) => s.tokens[s.tokens.length - 1]?.text ?? null);
 
   const wiringInfo = modelInfo?.mlp_wiring ?? null;
   const IN = wiringInfo?.in_nodes ?? 12;
@@ -136,14 +129,42 @@ export default function NeuralNetworkView({ origin }: { origin: readonly [number
     () => new THREE.MeshBasicMaterial({ color: scene.nodeRim, side: THREE.BackSide }),
     []
   );
+  // Built per mount — the scene remounts on theme change, so these follow it.
+  const colorSet = useMemo(() => {
+    const full = {
+      in: new THREE.Color(palette.promptToken),
+      hid: new THREE.Color(palette.accent),
+      out: new THREE.Color(palette.generatedToken),
+    };
+    return {
+      full,
+      pale: {
+        in: new THREE.Color(palette.surface).lerp(full.in, 0.25),
+        hid: new THREE.Color(palette.surface).lerp(full.hid, 0.25),
+        out: new THREE.Color(palette.surface).lerp(full.out, 0.25),
+      },
+      edgeFaint: new THREE.Color(scene.edgeFaint),
+      edgeStrong: new THREE.Color(scene.edge),
+    };
+  }, []);
   const nodeMats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
   const nodeMeshes = useRef<(THREE.Mesh | null)[]>([]);
   const current = useRef<Float32Array>(new Float32Array(IN + HID + IN));
   const tmpColor = useMemo(() => new THREE.Color(), []);
+  const lastDataStep = useRef(-1);
+  const sweepStart = useRef(-10);
 
-  useFrame((_state, dt) => {
+  useFrame((state, dt) => {
     const { ffn, selectedLayer: sel } = useSimStore.getState();
     const data = ffn[sel] ?? null;
+    const now = state.clock.elapsedTime;
+
+    // A new token's data for this layer starts a fresh left→right sweep.
+    if (data && data.step !== lastDataStep.current) {
+      lastDataStep.current = data.step;
+      sweepStart.current = now;
+    }
+    const tSince = now - sweepStart.current;
 
     const inVals = data?.inputPooled ?? null;
     const hidVals = data ? poolTo(data.activations, HID) : null;
@@ -159,7 +180,6 @@ export default function NeuralNetworkView({ origin }: { origin: readonly [number
     const nHid = norm(hidVals);
     const nOut = norm(outVals);
 
-    const k = 1 - Math.exp(-dt * 7);
     const total = IN + HID + IN;
     if (current.current.length !== total) current.current = new Float32Array(total);
 
@@ -181,9 +201,12 @@ export default function NeuralNetworkView({ origin }: { origin: readonly [number
         t = nOut ? Math.abs(nOut.arr[idx - IN - HID] ?? 0) / nOut.m : 0;
       }
 
+      // Staggered easing: each column only starts moving toward the new
+      // values after its delay, so the update reads left → right.
+      const k = tSince < COLUMN_DELAY_S[col] ? 0 : 1 - Math.exp(-dt * 4.5);
       current.current[idx] += (t - current.current[idx]) * k;
       const v = current.current[idx];
-      tmpColor.copy(PALE[col]).lerp(FULL[col], v);
+      tmpColor.copy(colorSet.pale[col]).lerp(colorSet.full[col], v);
       mat.color.copy(tmpColor);
       mesh.scale.setScalar(0.78 + v * 0.55);
     }
@@ -195,7 +218,7 @@ export default function NeuralNetworkView({ origin }: { origin: readonly [number
       for (let e = 0; e < wiring.src.length; e++) {
         const act = current.current[wiring.src[e]] ?? 0;
         const t = wiring.base[e] * (0.18 + 0.82 * act);
-        tmpColor.copy(EDGE_FAINT).lerp(EDGE_STRONG, t);
+        tmpColor.copy(colorSet.edgeFaint).lerp(colorSet.edgeStrong, t);
         colors.setXYZ(e * 2, tmpColor.r, tmpColor.g, tmpColor.b);
         colors.setXYZ(e * 2 + 1, tmpColor.r, tmpColor.g, tmpColor.b);
       }
@@ -216,7 +239,9 @@ export default function NeuralNetworkView({ origin }: { origin: readonly [number
             neurons — inside layer {selectedLayer}&apos;s mlp
           </div>
           <div className="mt-0.5 text-[11px] text-ink2">
-            wire brightness = real connection strength × live signal · one pulse per token
+            {lastToken
+              ? `processing “${visualizeToken(lastToken)}” — signal flows input → neurons → output`
+              : "wire brightness = real connection strength × live signal"}
           </div>
           <div className="font-mono text-[10px] text-ink3">
             each circle is a group of real neurons · pick a layer in the attention panel

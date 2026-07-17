@@ -1,68 +1,136 @@
 /**
- * Educational dark palette — "chalkboard diagram" style.
+ * Two validated educational palettes — dark ("chalkboard") and light
+ * ("textbook") — same semantic color language in both:
+ * green = input, blue = processing, red = output, amber = computing now.
  *
- * Validated with the dataviz six-checks validator against the card surface
- * (#131722, dark mode):
- *   - identity pair green #2aa35d (input/prompt) + red #e0564f
- *     (output/generated) — ALL CHECKS PASS, worst CVD ΔE 14.4 (deutan),
- *     with INPUT/OUTPUT section labels as secondary encoding
- *   - accent blue #4d84ea (single-series marks) — ALL CHECKS PASS
- *   - amber #cc7d0a ("processing now" state, always with a label) — PASS
- * Sequential ramps are single-hue with monotone lightness, dark-anchored
- * (near-surface dark = 0, bright = 1) for the dark surface.
+ * Both were checked with the dataviz six-checks validator against their card
+ * surface (CVD ΔE of the green/red identity pair ≥ 12 under protan/deutan,
+ * ≥ 3:1 contrast, lightness bands, chroma floor):
+ *   dark  (#131722): #2aa35d / #e0564f (ΔE 14.4) · accent #4d84ea · amber #cc7d0a
+ *   light (#ffffff): #0f8a3d / #d94343 (ΔE 12.9) · accent #2a5bd7 · amber #d97706
+ * Sequential ramps are single-hue, monotone lightness, anchored at the
+ * surface (dark-anchored on dark, light-anchored on light).
+ *
+ * Exports are live bindings switched by applyTheme(); the 3D scene remounts
+ * on theme change so every material picks up the new values.
  */
 import { scaleLinear } from "d3-scale";
 
-export const palette = {
-  page: "#0b0e17",
-  surface: "#131722",
-  raised: "#1c2333",
-  ink: "#e9edf9",
-  ink2: "#a9b3ce",
-  ink3: "#6e7893",
-  grid: "#29314a",
-  border: "rgba(255,255,255,0.1)",
+export type ThemeName = "dark" | "light";
 
-  /** Single-series marks: probability bars, meters, UI accent. */
-  accent: "#4d84ea",
-  /** Meter track = dark step of the accent's own ramp. */
-  accentTrack: "#21315a",
+export interface Palette {
+  page: string;
+  surface: string;
+  raised: string;
+  ink: string;
+  ink2: string;
+  ink3: string;
+  grid: string;
+  accent: string;
+  accentTrack: string;
+  promptToken: string;
+  generatedToken: string;
+  active: string;
+  danger: string;
+}
 
-  /** Identity pair (validated): input/prompt vs output/generated. */
-  promptToken: "#2aa35d",
-  generatedToken: "#e0564f",
+export interface SceneStyle {
+  background: string;
+  nodeRim: string;
+  edge: string;
+  edgeFaint: string;
+  slabFill: string;
+  slabEdge: string;
+  towerBlue: string;
+  beam: string;
+  axis: string;
+  dropline: string;
+  gridMajor: string;
+  gridMinor: string;
+  ambient: number;
+  directional: number;
+}
 
-  /** "This is computing right now" highlight — always labeled. */
-  active: "#cc7d0a",
+const PALETTES: Record<ThemeName, Palette> = {
+  dark: {
+    page: "#0b0e17",
+    surface: "#131722",
+    raised: "#1c2333",
+    ink: "#e9edf9",
+    ink2: "#a9b3ce",
+    ink3: "#6e7893",
+    grid: "#29314a",
+    accent: "#4d84ea",
+    accentTrack: "#21315a",
+    promptToken: "#2aa35d",
+    generatedToken: "#e0564f",
+    active: "#cc7d0a",
+    danger: "#e0564f",
+  },
+  light: {
+    page: "#f4f6fb",
+    surface: "#ffffff",
+    raised: "#f1f4fa",
+    ink: "#17203a",
+    ink2: "#4c5670",
+    ink3: "#8a93ab",
+    grid: "#dfe4f0",
+    accent: "#2a5bd7",
+    accentTrack: "#dbe5fb",
+    promptToken: "#0f8a3d",
+    generatedToken: "#d94343",
+    active: "#d97706",
+    danger: "#c02626",
+  },
+};
 
-  danger: "#e0564f",
-} as const;
+const SCENES: Record<ThemeName, SceneStyle> = {
+  dark: {
+    background: "#0b0e17",
+    nodeRim: "#dfe5f5",
+    edge: "#86abf1",
+    edgeFaint: "#2b3552",
+    slabFill: "#1a2135",
+    slabEdge: "#8ea0c6",
+    towerBlue: "#5b89e6",
+    beam: "#41547f",
+    axis: "#5d6890",
+    dropline: "#3a4663",
+    gridMajor: "#232b42",
+    gridMinor: "#151b2a",
+    ambient: 0.85,
+    directional: 0.5,
+  },
+  light: {
+    background: "#f6f8fc",
+    nodeRim: "#26304f",
+    edge: "#2f3e9e",
+    edgeFaint: "#ccd3ea",
+    slabFill: "#e9edf9",
+    slabEdge: "#3a4468",
+    towerBlue: "#4a7ade",
+    beam: "#9db1e8",
+    axis: "#8a93ab",
+    dropline: "#aeb9d6",
+    gridMajor: "#ccd5ea",
+    gridMinor: "#e4e9f5",
+    ambient: 1.05,
+    directional: 0.65,
+  },
+};
 
-/** Sequential blue ramp — attention weights (0 → 1, dark → bright). */
-export const ATTN_RAMP = [
-  "#161b2e",
-  "#1d2a4c",
-  "#243d74",
-  "#2c53a1",
-  "#3a6cc9",
-  "#5b89e6",
-  "#86abf1",
-  "#b6d0f9",
-  "#e4eefd",
-];
-
-/** Second sequential context — activation magnitude (teal, dark → bright). */
-export const ACT_RAMP = [
-  "#13211c",
-  "#183a2f",
-  "#1e5343",
-  "#256d56",
-  "#2e8869",
-  "#48a37f",
-  "#73bd9c",
-  "#a6d7c0",
-  "#def3e8",
-];
+const RAMPS: Record<ThemeName, { attn: string[]; act: string[] }> = {
+  // dark-anchored: near-surface dark = 0, bright = 1
+  dark: {
+    attn: ["#161b2e", "#1d2a4c", "#243d74", "#2c53a1", "#3a6cc9", "#5b89e6", "#86abf1", "#b6d0f9", "#e4eefd"],
+    act: ["#13211c", "#183a2f", "#1e5343", "#256d56", "#2e8869", "#48a37f", "#73bd9c", "#a6d7c0", "#def3e8"],
+  },
+  // light-anchored: near-white = 0, dark = 1
+  light: {
+    attn: ["#f3f7fe", "#dfe9fc", "#c2d4f9", "#9dbaf3", "#749aea", "#4e7bdf", "#2a5bd7", "#1d44a9", "#132f78"],
+    act: ["#effbf7", "#d2f1e6", "#ace2d0", "#7fceb5", "#52b497", "#2c977b", "#127a61", "#0a604c", "#064a3b"],
+  },
+};
 
 function rampScale(ramp: string[]) {
   return scaleLinear<string>()
@@ -70,9 +138,6 @@ function rampScale(ramp: string[]) {
     .range(ramp)
     .clamp(true);
 }
-
-export const attnScale = rampScale(ATTN_RAMP);
-export const actScale = rampScale(ACT_RAMP);
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -98,16 +163,21 @@ export function rampLUT(ramp: string[], n = 256): Uint8ClampedArray {
   return lut;
 }
 
-export const attnLUT = rampLUT(ATTN_RAMP);
+// Live bindings — importers always see the current theme's values.
+export let palette: Palette = PALETTES.dark;
+export let scene: SceneStyle = SCENES.dark;
+export let ATTN_RAMP: string[] = RAMPS.dark.attn;
+export let ACT_RAMP: string[] = RAMPS.dark.act;
+export let attnScale = rampScale(ATTN_RAMP);
+export let actScale = rampScale(ACT_RAMP);
+export let attnLUT = rampLUT(ATTN_RAMP);
 
-/** Scene styling (3D diagram look, not chart marks). */
-export const scene = {
-  background: "#0b0e17",
-  nodeRim: "#dfe5f5", // light outline around every node — chalkboard diagram
-  edge: "#86abf1", // strong connection (bright on dark)
-  edgeFaint: "#2b3552", // weak connection
-  slabFill: "#1a2135",
-  slabEdge: "#8ea0c6",
-  beam: "#41547f",
-  axis: "#5d6890",
-} as const;
+export function applyTheme(name: ThemeName): void {
+  palette = PALETTES[name];
+  scene = SCENES[name];
+  ATTN_RAMP = RAMPS[name].attn;
+  ACT_RAMP = RAMPS[name].act;
+  attnScale = rampScale(ATTN_RAMP);
+  actScale = rampScale(ACT_RAMP);
+  attnLUT = rampLUT(ATTN_RAMP);
+}

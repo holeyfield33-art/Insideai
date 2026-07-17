@@ -7,6 +7,7 @@
  */
 import { create } from "zustand";
 
+import { applyTheme, type ThemeName } from "./palette";
 import type {
   LogitsData,
   ModelInfo,
@@ -16,6 +17,16 @@ import type {
   TokenView,
   Zone,
 } from "./types";
+
+const THEME_KEY = "insideai-theme";
+
+function initialTheme(): ThemeName {
+  if (typeof window !== "undefined") {
+    const saved = window.localStorage.getItem(THEME_KEY);
+    if (saved === "light" || saved === "dark") return saved;
+  }
+  return "dark";
+}
 
 export interface AttentionData {
   layer: number;
@@ -99,7 +110,10 @@ interface SimState {
   selectedLayer: number;
   selectedHead: number; // -1 = head mean
   focusZone: Zone;
+  /** Bumped on every zone click so re-clicking the same zone re-centers. */
+  focusNonce: number;
   cinematic: boolean;
+  theme: ThemeName;
 
   // actions
   applyEvent: (ev: ServerEvent) => void;
@@ -109,9 +123,13 @@ interface SimState {
   setSelectedHead: (h: number) => void;
   setFocusZone: (z: Zone) => void;
   setCinematic: (on: boolean) => void;
+  setTheme: (t: ThemeName) => void;
 }
 
 const emptyLayers = <T,>(n: number): (T | null)[] => Array.from({ length: n }, () => null);
+
+const startTheme = initialTheme();
+applyTheme(startTheme);
 
 export const useSimStore = create<SimState>((set, get) => ({
   connection: "connecting",
@@ -145,7 +163,9 @@ export const useSimStore = create<SimState>((set, get) => ({
   selectedLayer: 0,
   selectedHead: -1,
   focusZone: "overview",
+  focusNonce: 0,
   cinematic: true,
+  theme: startTheme,
 
   applyEvent: (ev) => {
     switch (ev.type) {
@@ -310,6 +330,12 @@ export const useSimStore = create<SimState>((set, get) => ({
   setParams: (p) => set({ params: { ...get().params, ...p } }),
   setSelectedLayer: (selectedLayer) => set({ selectedLayer }),
   setSelectedHead: (selectedHead) => set({ selectedHead }),
-  setFocusZone: (focusZone) => set({ focusZone, cinematic: false }),
+  setFocusZone: (focusZone) =>
+    set({ focusZone, cinematic: false, focusNonce: get().focusNonce + 1 }),
   setCinematic: (cinematic) => set({ cinematic }),
+  setTheme: (theme) => {
+    applyTheme(theme);
+    if (typeof window !== "undefined") window.localStorage.setItem(THEME_KEY, theme);
+    set({ theme });
+  },
 }));

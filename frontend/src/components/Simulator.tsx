@@ -10,18 +10,26 @@ import PromptInput from "@/components/hud/PromptInput";
 import TokenGenerationAnimation from "@/components/hud/TokenGenerationAnimation";
 import TopBar from "@/components/hud/TopBar";
 import Scene from "@/components/scene/Scene";
+import { useSimStore } from "@/lib/store";
 import { simSocket } from "@/lib/ws";
 
 export default function Simulator() {
+  const theme = useSimStore((s) => s.theme);
+
   useEffect(() => {
     simSocket.connect();
     return () => simSocket.disconnect();
   }, []);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-page">
       <div className="absolute inset-0">
-        <Scene />
+        {/* Remount on theme change so every 3D material picks up new colors */}
+        <Scene key={theme} />
       </div>
 
       {/* HUD overlay — panels opt back into pointer events individually.

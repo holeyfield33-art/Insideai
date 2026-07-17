@@ -97,7 +97,7 @@ export default function EmbeddingSpace({ origin }: { origin: readonly [number, n
 
   return (
     <group position={[origin[0], origin[1], origin[2]]}>
-      <gridHelper args={[15, 10, "#2a3450", "#1b2236"]} position={[0, FLOOR_Y, 0]} />
+      <gridHelper args={[15, 10, scene.gridMajor, scene.gridMinor]} position={[0, FLOOR_Y, 0]} />
 
       <lineSegments geometry={axesGeo}>
         <lineBasicMaterial color={scene.axis} transparent opacity={0.8} />
@@ -113,7 +113,7 @@ export default function EmbeddingSpace({ origin }: { origin: readonly [number, n
       </Html>
 
       <lineSegments ref={dropRef} geometry={dropGeo} frustumCulled={false}>
-        <lineBasicMaterial color="#3a4663" transparent opacity={0.55} />
+        <lineBasicMaterial color={scene.dropline} transparent opacity={0.55} />
       </lineSegments>
 
       <Html center position={[0, BASE_Y + SCALE_Y + 2.0, 0]} distanceFactor={26} zIndexRange={[0, 10]}>

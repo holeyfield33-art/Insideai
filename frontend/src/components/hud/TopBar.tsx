@@ -25,8 +25,11 @@ export default function TopBar() {
   const setFocusZone = useSimStore((s) => s.setFocusZone);
   const setCinematic = useSimStore((s) => s.setCinematic);
   const stats = useSimStore((s) => s.stats);
+  const theme = useSimStore((s) => s.theme);
+  const setTheme = useSimStore((s) => s.setTheme);
 
   const conn = CONN[connection];
+  const shortModel = modelInfo?.model.split("/").pop() ?? "";
 
   return (
     <div className="pointer-events-auto flex items-center justify-between gap-3 px-4 py-2.5">
@@ -72,11 +75,20 @@ export default function TopBar() {
           </div>
         )}
         {modelInfo && (
-          <div className="glass hidden rounded-full px-3 py-1 font-mono text-[11px] text-ink2 sm:block">
-            {modelInfo.model} · {modelInfo.n_layer}L · {modelInfo.n_head}H ·{" "}
-            {modelInfo.param_count_h}
+          <div
+            className="glass hidden cursor-help rounded-full px-3 py-1 font-mono text-[11px] text-ink2 sm:block"
+            title={`The real language model running locally behind this visualization: ${modelInfo.model} — ${modelInfo.n_layer} transformer layers, ${modelInfo.n_head} attention heads, ${modelInfo.param_count_h} parameters. Everything on screen comes from its live computation.`}
+          >
+            {shortModel} · {modelInfo.n_layer} layers · {modelInfo.param_count_h}
           </div>
         )}
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title="Switch between dark and light theme"
+          className="glass rounded-full px-3 py-1 text-[11px] text-ink2 transition-colors hover:text-ink"
+        >
+          {theme === "dark" ? "☾ Dark" : "☀ Light"}
+        </button>
         <div className="glass flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-ink2">
           <span className={`h-2 w-2 rounded-full ${conn.dot}`} />
           {conn.label}

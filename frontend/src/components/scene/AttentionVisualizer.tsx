@@ -54,7 +54,9 @@ function buildArcGeometry(
     p0.set(...positions[i]);
     p2.set(...positions[j]);
     mid.lerpVectors(p0, p2, 0.5);
-    mid.y += 0.6 + p0.distanceTo(p2) * 0.3; // arc height grows with span
+    const span = p0.distanceTo(p2);
+    mid.y += 0.6 + span * 0.28; // arc height grows with span
+    mid.z -= 0.9 + span * 0.22; // and bows into depth — reads as 3D
     const curve = new THREE.QuadraticBezierCurve3(p0.clone(), mid.clone(), p2.clone());
     const pts = curve.getPoints(CURVE_SEGMENTS);
 
