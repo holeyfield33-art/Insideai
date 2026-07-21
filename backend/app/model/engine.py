@@ -377,13 +377,23 @@ class TransformerEngine:
             else:
                 ffn = None
 
+            hidden_norm = round(float(curr.norm().item()), 2)
+            residual_delta = round(float((curr - prev).norm().item()), 2)
+
             layers.append(
                 {
                     "layer": i,
                     "attention": attention,
                     "ffn": ffn,
-                    "hidden_norm": round(float(curr.norm().item()), 2),
-                    "residual_delta": round(float((curr - prev).norm().item()), 2),
+                    "hidden_norm": hidden_norm,
+                    "residual_delta": residual_delta,
+                    # PLACEHOLDER WIRING METRIC — not the validated unitarity-lab
+                    # zeta. This is a real ratio computed from the real
+                    # hidden_norm/residual_delta above (no synthetic data), used
+                    # only to prove the anomaly-event pipe end-to-end. Replace
+                    # with the actual passive-mode zeta hook before trusting any
+                    # value shown under this key.
+                    "zeta_proxy": round(residual_delta / (hidden_norm + 1e-6), 4),
                 }
             )
         return layers

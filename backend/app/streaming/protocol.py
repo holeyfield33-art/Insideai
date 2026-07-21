@@ -44,6 +44,23 @@ def step_events(trace: dict, step: int, n_layer: int) -> Iterator[Event]:
             },
             0.06 * layer_scale,
         )
+        # PLACEHOLDER — proves the anomaly-event pipe works end-to-end before
+        # unitarity-lab's real passive-mode zeta/BOCPD hooks are wired in.
+        # "flagged" is deliberately always False here: no change-point
+        # detector runs yet, so nothing has actually been detected. Do not
+        # treat this event as a real anomaly signal until zeta_proxy is
+        # replaced with the audited zeta computation and flagged is driven
+        # by an actual BOCPD/spectral test.
+        yield ev(
+            "anomaly",
+            {
+                "layer": i,
+                "zeta_proxy": layer["zeta_proxy"],
+                "flagged": False,
+                "source": "placeholder",
+            },
+            0.02 * layer_scale,
+        )
 
     yield ev("logits", trace["logits"], (0.8 if first else 0.3) * step_scale)
     yield ev("sampled", trace["sampled"], (0.6 if first else 0.25) * step_scale)

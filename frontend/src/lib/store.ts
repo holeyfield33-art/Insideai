@@ -54,6 +54,13 @@ export interface LayerMeta {
   residualDelta: number;
 }
 
+export interface AnomalyPoint {
+  step: number;
+  layer: number;
+  zetaProxy: number;
+  flagged: boolean;
+}
+
 export interface GenerationParamsUI {
   max_new_tokens: number;
   temperature: number;
@@ -94,6 +101,11 @@ interface SimState {
   attention: (AttentionData | null)[];
   ffn: (FfnData | null)[];
   layerMeta: (LayerMeta | null)[];
+  /** Latest zeta_proxy reading per layer, for the layer-chip row. */
+  anomalyLatest: (AnomalyPoint | null)[];
+  /** Rolling window across all layers/steps, oldest first — the EKG trace.
+      Capped so a long generation doesn't grow this unbounded. */
+  anomalyHistory: AnomalyPoint[];
 
   logits: LogitsData | null;
   sampled: SampledToken | null;
@@ -149,6 +161,8 @@ export const useSimStore = create<SimState>((set, get) => ({
   attention: [],
   ffn: [],
   layerMeta: [],
+  anomalyLatest: [],
+  anomalyHistory: [],
 
   logits: null,
   sampled: null,
@@ -176,6 +190,8 @@ export const useSimStore = create<SimState>((set, get) => ({
           attention: emptyLayers(info.n_layer),
           ffn: emptyLayers(info.n_layer),
           layerMeta: emptyLayers(info.n_layer),
+          anomalyLatest: emptyLayers(info.n_layer),
+          anomalyHistory: [],
           // Late layers are where the "meaning" work shows most clearly.
           selectedLayer: Math.max(0, info.n_layer - 1),
         });
@@ -200,6 +216,8 @@ export const useSimStore = create<SimState>((set, get) => ({
           attention: emptyLayers(n),
           ffn: emptyLayers(n),
           layerMeta: emptyLayers(n),
+          anomalyLatest: emptyLayers(n),
+          anomalyHistory: [],
           stats: { computeMs: null, durationS: null, tokensPerS: null },
         });
         break;
@@ -275,6 +293,21 @@ export const useSimStore = create<SimState>((set, get) => ({
         const layerMeta = get().layerMeta.slice();
         layerMeta[ev.layer] = { hiddenNorm: ev.hidden_norm, residualDelta: ev.residual_delta };
         set({ layerMeta });
+        break;
+      }
+
+      case "anomaly": {
+        const point: AnomalyPoint = {
+          step: ev.step,
+          layer: ev.layer,
+          zetaProxy: ev.zeta_proxy,
+          flagged: ev.flagged,
+        };
+        const anomalyLatest = get().anomalyLatest.slice();
+        anomalyLatest[ev.layer] = point;
+        const HISTORY_CAP = 600; // ~ a few full generations of layer ticks
+        const anomalyHistory = [...get().anomalyHistory, point].slice(-HISTORY_CAP);
+        set({ anomalyLatest, anomalyHistory });
         break;
       }
 

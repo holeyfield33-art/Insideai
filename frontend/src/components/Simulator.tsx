@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import AnomalyEkgPanel from "@/components/hud/AnomalyEkgPanel";
 import AttentionPanel from "@/components/hud/AttentionPanel";
 import ErrorToast from "@/components/hud/ErrorToast";
 import PipelineStatus from "@/components/hud/PipelineStatus";
@@ -40,6 +41,7 @@ export default function Simulator() {
         <div className="flex min-h-0 flex-1 items-start justify-between gap-3 px-3 pt-2">
           <div className="hidden max-h-full w-72 flex-col gap-3 overflow-y-auto pb-2 md:flex">
             <PipelineStatus />
+            <AnomalyEkgPanel />
             <AttentionPanel />
           </div>
           <div className="hidden max-h-full w-80 flex-col gap-3 overflow-y-auto pb-2 md:flex">

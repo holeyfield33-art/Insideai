@@ -150,6 +150,19 @@ export type ServerEvent =
       hidden_norm: number;
       residual_delta: number;
     }
+  | {
+      /** PLACEHOLDER wiring event — zeta_proxy is a real ratio computed from
+          hidden_norm/residual_delta above, not the audited unitarity-lab
+          zeta. flagged is hardcoded false server-side: no change-point
+          detector runs yet. Treat this as "pipe proven", not "anomaly
+          detected". */
+      type: "anomaly";
+      step: number;
+      layer: number;
+      zeta_proxy: number;
+      flagged: boolean;
+      source: string;
+    }
   | ({ type: "logits"; step: number } & LogitsData)
   | ({ type: "sampled"; step: number } & SampledToken)
   | {
