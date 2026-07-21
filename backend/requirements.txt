@@ -3,3 +3,4 @@ uvicorn[standard]>=0.30
 torch>=2.3
 transformers>=4.44
 numpy>=1.26
+unitarity-labs @ git+https://github.com/holeyfield33-art/unitarity-lab@1dfe4e52771eb2fd82f4def61d1e740f3c61b77d

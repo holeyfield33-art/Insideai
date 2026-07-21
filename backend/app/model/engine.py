@@ -33,6 +33,8 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
+from unitarity_labs.core.passive_hook import PassiveTelemetryHook
+from unitarity_labs.core.universal_hook import UniversalHookWrapper
 
 from ..config import settings
 from . import reduce
@@ -96,6 +98,8 @@ class TransformerEngine:
         self._mlp_wiring: list[dict] = []
         # Forward passes share the hook buffers; serialize callers.
         self._lock = threading.Lock()
+        # unitarity-lab passive-mode telemetry hook, built once at load.
+        self._telemetry_hook: PassiveTelemetryHook | None = None
 
     # ------------------------------------------------------------- loading
 
@@ -121,6 +125,13 @@ class TransformerEngine:
         self.family = self._detect_family()
         self._register_mlp_hooks()
         self._mlp_wiring = self._compute_mlp_wiring()
+        # Passive-mode hooks only capture metrics (no tensor mutation, see
+        # UniversalHookWrapper's passive-mode tests in unitarity-lab) and
+        # fire on any forward pass through self.model, so wrapping once here
+        # is enough for every trace_prefill/trace_decode call below.
+        self._telemetry_hook = PassiveTelemetryHook(
+            UniversalHookWrapper(model=self.model, config=self.model.config, mode="passive")
+        )
         self.load_seconds = round(time.time() - t0, 2)
         self.loaded = True
 
@@ -331,6 +342,12 @@ class TransformerEngine:
         layers = []
         k_len = attentions[0].shape[-1]
         send_full_heads = k_len <= settings.full_attention_seq_cap
+        # unitarity-lab's passive-mode hook reports one real cross-layer
+        # coherence reading per forward pass (its hooks already fired during
+        # the model() call that produced `attentions`/`hidden_states` above)
+        # — every layer this step shares that same reading rather than a
+        # fake distinct-per-layer value.
+        telemetry = self._telemetry_hook.read() if self._telemetry_hook is not None else None
         for i, attn_batch in enumerate(attentions):
             attn = attn_batch[0].float()  # (n_head, q_len, k_len)
             rows = attn[:, -1, :]  # newest query position: (n_head, k_len)
@@ -377,13 +394,23 @@ class TransformerEngine:
             else:
                 ffn = None
 
+            hidden_norm = round(float(curr.norm().item()), 2)
+            residual_delta = round(float((curr - prev).norm().item()), 2)
+
             layers.append(
                 {
                     "layer": i,
                     "attention": attention,
                     "ffn": ffn,
-                    "hidden_norm": round(float(curr.norm().item()), 2),
-                    "residual_delta": round(float((curr - prev).norm().item()), 2),
+                    "hidden_norm": hidden_norm,
+                    "residual_delta": residual_delta,
+                    # Real telemetry from unitarity-lab's passive-mode hook
+                    # (zeta_raw: signed cosine coherence between the bridge's
+                    # source/sink layers; flagged: VAR's calibrated rupture
+                    # detector on spectral_gap). 0.0/False before the hook has
+                    # a reading yet (e.g. telemetry unavailable for this model).
+                    "zeta_proxy": telemetry["zeta_raw"] if telemetry else 0.0,
+                    "flagged": telemetry["flagged"] if telemetry else False,
                 }
             )
         return layers

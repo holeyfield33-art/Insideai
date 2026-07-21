@@ -44,6 +44,20 @@ def step_events(trace: dict, step: int, n_layer: int) -> Iterator[Event]:
             },
             0.06 * layer_scale,
         )
+        # zeta_proxy/flagged are unitarity-lab's real passive-mode telemetry
+        # (engine.py's PassiveTelemetryHook): zeta_raw from the model's own
+        # activations, flagged from VAR's calibrated SpectralRuptureDetector
+        # — not synthesized here.
+        yield ev(
+            "anomaly",
+            {
+                "layer": i,
+                "zeta_proxy": layer["zeta_proxy"],
+                "flagged": layer["flagged"],
+                "source": "unitarity-lab",
+            },
+            0.02 * layer_scale,
+        )
 
     yield ev("logits", trace["logits"], (0.8 if first else 0.3) * step_scale)
     yield ev("sampled", trace["sampled"], (0.6 if first else 0.25) * step_scale)

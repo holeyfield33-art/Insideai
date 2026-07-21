@@ -150,6 +150,18 @@ export type ServerEvent =
       hidden_norm: number;
       residual_delta: number;
     }
+  | {
+      /** unitarity-lab's real passive-mode telemetry: zeta_proxy is
+          zeta_raw (one reading per generation step, shared across that
+          step's layers), flagged comes from VAR's calibrated
+          SpectralRuptureDetector on spectral_gap. */
+      type: "anomaly";
+      step: number;
+      layer: number;
+      zeta_proxy: number;
+      flagged: boolean;
+      source: string;
+    }
   | ({ type: "logits"; step: number } & LogitsData)
   | ({ type: "sampled"; step: number } & SampledToken)
   | {
