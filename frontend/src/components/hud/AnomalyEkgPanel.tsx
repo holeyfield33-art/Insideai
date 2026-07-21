@@ -7,13 +7,11 @@
  * reading — same idea as PipelineStatus's layer row, but driven by the
  * monitoring signal instead of pipeline stage.
  *
- * IMPORTANT: zeta_proxy is a placeholder ratio (residual_delta / hidden_norm)
- * wired in to prove the event pipe end-to-end. It is NOT the audited
- * unitarity-lab zeta, and `flagged` is hardcoded false server-side — nothing
- * here has actually been detected as anomalous yet. This panel visualizes
- * "is the pipe alive and which layer is it reporting from", not "here is a
- * real anomaly". Swap the backend's zeta_proxy source for the real
- * passive-mode hook and this panel keeps working unchanged.
+ * zeta_proxy is unitarity-lab's real passive-mode zeta_raw (one reading per
+ * generation step, shared across that step's layers — the hook reports a
+ * single cross-layer coherence signal per forward pass, not a distinct value
+ * per layer). `flagged` comes from VAR's calibrated SpectralRuptureDetector
+ * on the model's spectral_gap, not a hardcoded value.
  */
 import { useMemo } from "react";
 
@@ -64,7 +62,7 @@ export default function AnomalyEkgPanel() {
     <div className="glass pointer-events-auto rounded-2xl p-3">
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-widest text-ink2">
-          Anomaly pipe (placeholder)
+          Anomaly pipe
         </h2>
         <span className="font-mono text-[10px] text-ink3">
           {latestPoint ? `layer ${latestPoint.layer} · step ${latestPoint.step}` : "waiting"}

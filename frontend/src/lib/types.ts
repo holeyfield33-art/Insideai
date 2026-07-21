@@ -151,11 +151,10 @@ export type ServerEvent =
       residual_delta: number;
     }
   | {
-      /** PLACEHOLDER wiring event — zeta_proxy is a real ratio computed from
-          hidden_norm/residual_delta above, not the audited unitarity-lab
-          zeta. flagged is hardcoded false server-side: no change-point
-          detector runs yet. Treat this as "pipe proven", not "anomaly
-          detected". */
+      /** unitarity-lab's real passive-mode telemetry: zeta_proxy is
+          zeta_raw (one reading per generation step, shared across that
+          step's layers), flagged comes from VAR's calibrated
+          SpectralRuptureDetector on spectral_gap. */
       type: "anomaly";
       step: number;
       layer: number;
