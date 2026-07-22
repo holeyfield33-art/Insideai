@@ -116,7 +116,7 @@ export default function EmbeddingSpace({ origin }: { origin: readonly [number, n
         <lineBasicMaterial color={scene.dropline} transparent opacity={0.55} />
       </lineSegments>
 
-      <Html center position={[0, BASE_Y + SCALE_Y + 2.0, 0]} distanceFactor={26} zIndexRange={[0, 10]}>
+      <Html center position={[0, BASE_Y + SCALE_Y + 3.0, 0]} distanceFactor={26} zIndexRange={[0, 10]}>
         <div className="pointer-events-none select-none whitespace-nowrap text-center">
           <div className="text-[14px] font-semibold uppercase tracking-[0.28em] text-ink">
             embeddings

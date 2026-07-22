@@ -1,17 +1,18 @@
 "use client";
 
 /**
- * Live "flight recorder" trace: one line for zeta_proxy ticking in as
- * `anomaly` events arrive (one per layer, per generation step), plus a
- * per-layer chip row so you can see *which layer* produced the most recent
- * reading — same idea as PipelineStatus's layer row, but driven by the
- * monitoring signal instead of pipeline stage.
+ * Live "flight recorder" trace: one line for zeta_raw ticking in as
+ * `anomaly` events arrive (one per generation step). The chip row below
+ * shows which layers are part of that step's forward pass — it is NOT a
+ * per-layer reading, since zeta_raw is a single cross-layer coherence
+ * signal shared by every layer in that step.
  *
- * zeta_proxy is unitarity-lab's real passive-mode zeta_raw (one reading per
- * generation step, shared across that step's layers — the hook reports a
- * single cross-layer coherence signal per forward pass, not a distinct value
- * per layer). `flagged` comes from VAR's calibrated SpectralRuptureDetector
- * on the model's spectral_gap, not a hardcoded value.
+ * zeta_proxy (the wire field name, kept as-is) is unitarity-lab's real
+ * passive-mode zeta_raw (one reading per generation step, shared across
+ * that step's layers — the hook reports a single cross-layer coherence
+ * signal per forward pass, not a distinct value per layer). `flagged`
+ * comes from VAR's calibrated SpectralRuptureDetector on the model's
+ * spectral_gap, not a hardcoded value.
  */
 import { useMemo } from "react";
 
@@ -65,7 +66,7 @@ export default function AnomalyEkgPanel() {
           Anomaly pipe
         </h2>
         <span className="font-mono text-[10px] text-ink3">
-          {latestPoint ? `layer ${latestPoint.layer} · step ${latestPoint.step}` : "waiting"}
+          {latestPoint ? `step ${latestPoint.step}` : "waiting"}
         </span>
       </div>
 
@@ -97,15 +98,15 @@ export default function AnomalyEkgPanel() {
           <circle cx={lastX} cy={lastY} r={2.5} fill={layerColor(latestPoint.layer, nLayer)} />
         )}
       </svg>
-      {!hasData && (
-        <p className="mt-1 text-[10px] text-ink3">
-          zeta_proxy ticks will appear here once a generation is running
-        </p>
-      )}
+      <p className="mt-1 text-[10px] text-ink3">
+        {hasData
+          ? "cross-layer coherence · one reading per step"
+          : "zeta_raw ticks will appear here once a generation is running"}
+      </p>
 
       {nLayer > 0 && (
         <div className="mt-2">
-          <div className="mb-1 text-[10px] text-ink3">most recent reading per layer</div>
+          <div className="mb-1 text-[10px] text-ink3">layers covered this step</div>
           <div className="flex flex-wrap gap-[3px]">
             {Array.from({ length: nLayer }, (_, i) => {
               const point = anomalyLatest[i];
@@ -115,7 +116,7 @@ export default function AnomalyEkgPanel() {
                   key={i}
                   title={
                     point
-                      ? `layer ${i} · zeta_proxy ${point.zetaProxy} · step ${point.step}`
+                      ? `layer ${i} was part of step ${point.step}'s forward pass · zeta_raw ${point.zetaProxy} (step-level, shared across all layers)`
                       : `layer ${i} · no reading yet`
                   }
                   className={`h-3.5 w-4 rounded-[3px] text-center font-mono text-[8px] leading-[14px] transition-colors ${

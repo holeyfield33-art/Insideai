@@ -94,7 +94,7 @@ export default function TransformerTower({ origin }: { origin: readonly [number,
 
   return (
     <group position={[origin[0], origin[1], origin[2]]}>
-      <Html center position={[0, towerHeight + 1.7, 0]} distanceFactor={26} zIndexRange={[0, 10]}>
+      <Html center position={[0, towerHeight + 2.6, 0]} distanceFactor={26} zIndexRange={[0, 10]}>
         <div className="pointer-events-none select-none whitespace-nowrap text-center">
           <div className="text-[14px] font-semibold uppercase tracking-[0.28em] text-ink">
             transformer stack

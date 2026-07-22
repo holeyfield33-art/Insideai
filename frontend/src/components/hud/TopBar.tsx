@@ -32,9 +32,9 @@ export default function TopBar() {
   const shortModel = modelInfo?.model.split("/").pop() ?? "";
 
   return (
-    <div className="pointer-events-auto flex items-center justify-between gap-3 px-4 py-2.5">
+    <div className="pointer-events-auto relative z-10 flex items-center justify-between gap-3 bg-page/85 px-4 py-2.5 backdrop-blur-md">
       <div className="flex items-baseline gap-3">
-        <div className="glow-text select-none text-lg font-semibold tracking-[0.3em]">
+        <div className="glow-text relative z-10 select-none text-lg font-semibold tracking-[0.3em]">
           INSIDE<span className="text-accent">AI</span>
         </div>
         <div className="hidden text-[11px] uppercase tracking-widest text-ink3 lg:block">
