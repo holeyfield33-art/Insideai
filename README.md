@@ -94,6 +94,9 @@ Linux / macOS / GitHub Codespaces; a Windows PowerShell variant follows.
 > This requires an interactive admin (UAC) approval — it cannot be
 > done in a non-interactive/CI shell without a preinstalled runtime.
 
+For an exact, reproducible environment, install from
+`requirements-lock.txt` instead of `requirements.txt`.
+
 **Terminal 1 — backend:**
 
 ```bash
