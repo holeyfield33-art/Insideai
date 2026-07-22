@@ -84,7 +84,7 @@ export default function TokenGenerationAnimation() {
       className="glass pointer-events-auto mx-auto w-full max-w-5xl rounded-2xl px-3 py-2"
     >
       <div ref={scroller} className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <span className="sticky left-0 shrink-0 pr-1 text-[9px] font-semibold uppercase tracking-widest text-ink3">
+        <span className="sticky left-0 z-10 shrink-0 bg-surface pr-1.5 text-[9px] font-semibold uppercase tracking-widest text-ink3">
           prompt
         </span>
         <AnimatePresence initial={false}>
@@ -94,7 +94,7 @@ export default function TokenGenerationAnimation() {
         </AnimatePresence>
 
         <span className="shrink-0 px-1 text-ink3">→</span>
-        <span className="shrink-0 pr-1 text-[9px] font-semibold uppercase tracking-widest text-ink3">
+        <span className="shrink-0 bg-surface pr-1.5 text-[9px] font-semibold uppercase tracking-widest text-ink3">
           output
         </span>
         <AnimatePresence initial={false}>
