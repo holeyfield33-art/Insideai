@@ -86,6 +86,17 @@ Requirements: **Python 3.11+**, **Node 20+**, ~2 GB disk for the model
 (downloaded once from HuggingFace on first start). Commands below are for
 Linux / macOS / GitHub Codespaces; a Windows PowerShell variant follows.
 
+> **Windows prerequisite:** torch requires the Microsoft Visual C++
+> Redistributable. If `pip install` succeeds but the backend fails at
+> startup with `OSError: [WinError 126] ... c10.dll`, install
+> `vc_redist.x64.exe` from Microsoft
+> (https://aka.ms/vs/17/release/vc_redist.x64.exe), then relaunch.
+> This requires an interactive admin (UAC) approval — it cannot be
+> done in a non-interactive/CI shell without a preinstalled runtime.
+
+For an exact, reproducible environment, install from
+`requirements-lock.txt` instead of `requirements.txt`.
+
 **Terminal 1 — backend:**
 
 ```bash
