@@ -11,6 +11,7 @@ import { applyTheme, type ThemeName } from "./palette";
 import type {
   LogitsData,
   ModelInfo,
+  RunSummary,
   SampledToken,
   ServerEvent,
   Stage,
@@ -86,8 +87,17 @@ export const DEFAULT_PARAMS: GenerationParamsUI = {
 interface SimState {
   connection: "connecting" | "open" | "closed";
   modelInfo: ModelInfo | null;
+  /** Whether the backend has a live model (false = replay-only mode). null
+      until the server_mode handshake arrives. */
+  liveModel: boolean | null;
 
   running: boolean;
+  /** The currently-shown run is a recorded replay, not a live generation.
+      Set the moment the client requests a replay; cleared when a live run
+      starts. Drives the unmistakable REPLAY indicator. */
+  replaying: boolean;
+  /** Recorded runs available for replay (GET /runs). */
+  runs: RunSummary[];
   stage: Stage;
   step: number;
   activeLayer: number; // -1 when not inside the layer stack
@@ -130,6 +140,8 @@ interface SimState {
   // actions
   applyEvent: (ev: ServerEvent) => void;
   setConnection: (c: SimState["connection"]) => void;
+  setReplaying: (on: boolean) => void;
+  setRuns: (runs: RunSummary[]) => void;
   setParams: (p: Partial<GenerationParamsUI>) => void;
   setSelectedLayer: (l: number) => void;
   setSelectedHead: (h: number) => void;
@@ -146,8 +158,11 @@ applyTheme(startTheme);
 export const useSimStore = create<SimState>((set, get) => ({
   connection: "connecting",
   modelInfo: null,
+  liveModel: null,
 
   running: false,
+  replaying: false,
+  runs: [],
   stage: "idle",
   step: 0,
   activeLayer: -1,
@@ -183,6 +198,10 @@ export const useSimStore = create<SimState>((set, get) => ({
 
   applyEvent: (ev) => {
     switch (ev.type) {
+      case "server_mode":
+        set({ liveModel: ev.live });
+        break;
+
       case "model_info": {
         const { type: _t, ...info } = ev;
         set({
@@ -360,6 +379,8 @@ export const useSimStore = create<SimState>((set, get) => ({
   },
 
   setConnection: (connection) => set({ connection }),
+  setReplaying: (replaying) => set({ replaying }),
+  setRuns: (runs) => set({ runs }),
   setParams: (p) => set({ params: { ...get().params, ...p } }),
   setSelectedLayer: (selectedLayer) => set({ selectedLayer }),
   setSelectedHead: (selectedHead) => set({ selectedHead }),

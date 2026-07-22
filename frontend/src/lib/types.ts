@@ -73,7 +73,17 @@ export interface SampledToken {
   is_eos: boolean;
 }
 
+/** One recorded run, as listed by the backend's GET /runs endpoint. */
+export interface RunSummary {
+  id: string;
+  prompt: string;
+  model: string | null;
+  timestamp: string | null;
+  steps: number;
+}
+
 export type ServerEvent =
+  | { type: "server_mode"; live: boolean }
   | ({ type: "model_info" } & ModelInfo)
   | {
       type: "generation_start";

@@ -155,8 +155,35 @@ Backend env vars (defaults in parentheses):
 | `INSIDEAI_THREADS` (half your cores) | CPU threads for the model — leaves headroom for the browser |
 | `INSIDEAI_PORT` (`8000`) · `INSIDEAI_DEVICE` (`cpu`) | server basics; `cuda` if you have a GPU PyTorch build |
 | `INSIDEAI_MAX_PROMPT_TOKENS` (64) · `INSIDEAI_MAX_NEW_TOKENS` (96) | sequence budgets |
+| `INSIDEAI_RECORD` (`0`) | `1` records every run to `results/runs/` for later replay (see below); default off leaves live behavior unchanged |
+| `INSIDEAI_SKIP_MODEL` (`0`) | `1` starts the backend in replay-only mode — no model loaded, recordings still list and replay |
+| `INSIDEAI_ENV` (model short name) | short label baked into each recording's directory name |
 
 Frontend: `NEXT_PUBLIC_WS_URL` (`ws://127.0.0.1:8000/ws`).
+
+## Replay mode — review past runs without a live model
+
+Every visual is driven by a real forward pass, but you don't need the model
+loaded to *review* a run you already captured. Set `INSIDEAI_RECORD=1` and
+generate: the backend writes each run to
+`results/runs/<ISO-date>_<insideai-sha>_<env>/` as `run.jsonl` (every WebSocket
+event, in order) plus a `manifest.json` reproducibility record (prompt, model,
+seed, sampling params, git SHAs of all three repos, resolved tool versions,
+generated text).
+
+Then replay it — even on a machine with no model:
+
+```bash
+INSIDEAI_SKIP_MODEL=1 backend/.venv/bin/python backend/run.py   # no checkpoint loaded
+```
+
+Open the UI: the **Replay recorded run** picker (left panel) lists your
+recordings by prompt + timestamp. Pick one and it streams back over the *same*
+WebSocket protocol — identical event shapes to a live run, so the EKG panel,
+attention view and token stream render unchanged, and the zeta values are the
+recorded values exactly (no recomputation). A large **● REPLAY** banner stays
+on screen the whole time so a recording is never mistaken for a live run.
+`GET /runs` exposes the same list as JSON.
 
 ## Dependencies
 

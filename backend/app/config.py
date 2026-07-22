@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 
 def _env_int(name: str, default: int) -> int:
@@ -11,6 +12,15 @@ def _env_int(name: str, default: int) -> int:
         return int(os.getenv(name, str(default)))
     except ValueError:
         return default
+
+
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+# Repo root = .../<repo>/backend/app/config.py -> parents[2]. Used so recorded
+# runs land in <repo>/results/runs regardless of the process's working dir.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -62,6 +72,25 @@ class Settings:
             ).split(",")
         )
     )
+
+    # ------------------------------------------------------------- replay mode
+    # Opt-in run recording (default OFF so normal use is byte-for-byte
+    # unchanged). When on, every WS event of a generation is written to
+    # results/runs/<date>_<sha>_<env>/ alongside a reproducibility manifest.
+    record: bool = _env_flag("INSIDEAI_RECORD")
+
+    # Start the server without loading a model — replay-only mode. Recorded
+    # runs still list and replay over the same WS; live generation is refused.
+    skip_model_load: bool = _env_flag("INSIDEAI_SKIP_MODEL")
+
+    # Short label baked into each recording's directory name. Defaults to the
+    # model's short name (e.g. "distilgpt2"); override for prod/dev/etc.
+    env_tag: str = os.getenv("INSIDEAI_ENV", "").strip()
+
+    # Where recordings live. Absolute so it's stable no matter the cwd.
+    runs_dir: Path = field(default_factory=lambda: _REPO_ROOT / "results" / "runs")
+
+    repo_root: Path = field(default_factory=lambda: _REPO_ROOT)
 
 
 settings = Settings()

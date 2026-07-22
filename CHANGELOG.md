@@ -1,5 +1,38 @@
 # Changelog
 
+## Phase 4 — record & replay runs
+
+- **Recording (opt-in, default OFF).** `INSIDEAI_RECORD=1` makes the backend
+  capture every WebSocket event of a generation, in emission order, to
+  `results/runs/<ISO-date>_<insideai-sha>_<env>/run.jsonl` (one JSON event per
+  line) plus a `manifest.json` reproducibility record (prompt, model, seed +
+  the *effective* seed even for "random" runs, sampling params, git SHAs of all
+  three repos — insideai/unitarity-lab/VAR — resolved python/torch/transformers/
+  node versions, timestamp, total steps, generated text). Recording is a passive
+  tap on the exact dicts already sent (`app/recording.py`); with it off, live
+  behavior is byte-for-byte unchanged.
+- **Replay over the same protocol.** New `GET /runs` lists recordings
+  (`[{id, prompt, model, timestamp, steps}]`); a new `{"type":"replay","id"}`
+  WS message re-emits a run's events verbatim, honoring the client's speed
+  control via a shared `base_delay` (now the single source of truth for both
+  live pacing and replay, in `protocol.py`). Replayed events are byte-identical
+  to live ones, so the EKG panel, attention view and token stream render with no
+  special-case paths — and zeta values are the recorded values exactly, never
+  recomputed.
+- **No model needed to replay.** `INSIDEAI_SKIP_MODEL=1` starts the backend in
+  replay-only mode (`lifespan` skips `engine.load()`); the connect handshake
+  sends `{"type":"server_mode","live":false}` and no `model_info` (the recorded
+  `model_info` is the first replayed event instead). Live `generate` is refused
+  with a clear error in this mode.
+- **UI.** A `RunPicker` panel lists recorded runs by prompt + timestamp and
+  replays the selected one; an unmistakable, always-visible `ReplayBanner`
+  ("● REPLAY — recorded run") shows whenever a recording is on screen so it can
+  never be mistaken for a live run (honesty requirement).
+- Verified: `tsc --noEmit` + `next build` clean; the torch-free replay/listing/
+  path-traversal-guard logic unit-tested; recorded→replay round-trip asserts
+  byte-identical event streams and exact zeta equality against a model-less
+  backend.
+
 ## v1-live-zeta — Phase 3 checkpoint (swap placeholder for real telemetry)
 
 - Added `unitarity-labs` to `backend/requirements.txt`, pinned to its

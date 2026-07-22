@@ -4,13 +4,18 @@ over a WebSocket while a HuggingFace model generates text token by token.
 Protocol (client -> server):
     {"type": "generate", "prompt": str, "max_new_tokens"?, "temperature"?,
      "top_k"?, "top_p"?, "seed"?, "speed"?}
+    {"type": "replay", "id": str, "speed"?}
     {"type": "stop"}
     {"type": "ping"}
 
 Server -> client event types:
-    model_info, generation_start, tokenize, embeddings, positional,
+    server_mode, model_info, generation_start, tokenize, embeddings, positional,
     layer_start, attention, ffn, layer_end, logits, sampled, step_end,
     generation_end, error, pong
+
+Replay re-emits a recorded run's events over this same protocol, byte-for-byte,
+so the frontend renders a recording exactly as it would a live run (no
+special-case paths). See app/recording.py. Replay loads no model.
 """
 
 from __future__ import annotations
@@ -28,7 +33,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .model.engine import GenerationParams, engine
-from .streaming.protocol import step_events
+from .recording import RunRecorder, list_runs, load_run_events
+from .streaming.protocol import base_delay, step_events
 
 logger = logging.getLogger("insideai")
 
@@ -39,6 +45,12 @@ ENGINE_LOCK = asyncio.Lock()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    if settings.skip_model_load:
+        # Replay-only mode: no checkpoint is loaded. Recorded runs still list
+        # and replay over the WebSocket; live generation is refused.
+        logger.info("INSIDEAI_SKIP_MODEL set — starting in replay-only mode (no model).")
+        yield
+        return
     logger.info("Loading %s (first run downloads the checkpoint)...", settings.model_name)
     await asyncio.to_thread(engine.load)
     logger.info("Model ready in %.1fs", engine.load_seconds)
@@ -56,12 +68,18 @@ app.add_middleware(
 
 @app.get("/healthz")
 async def healthz() -> dict:
-    return {"status": "ok", "model_loaded": engine.loaded}
+    return {"status": "ok", "model_loaded": engine.loaded, "replay_only": not engine.loaded}
 
 
 @app.get("/model")
 async def model_info() -> dict:
     return engine.model_info()
+
+
+@app.get("/runs")
+async def runs() -> list[dict]:
+    """Recorded runs available for replay: [{id, prompt, model, timestamp, steps}]."""
+    return list_runs()
 
 
 class Session:
@@ -88,6 +106,16 @@ class Session:
 
 
 async def run_generation(session: Session, msg: dict) -> None:
+    if not engine.loaded:
+        await session.send(
+            {
+                "type": "error",
+                "message": "No model loaded — this backend is in replay-only mode. "
+                "Pick a recorded run to replay.",
+            }
+        )
+        return
+
     prompt = str(msg.get("prompt", ""))
     if not prompt.strip():
         await session.send({"type": "error", "message": "Prompt is empty."})
@@ -101,6 +129,26 @@ async def run_generation(session: Session, msg: dict) -> None:
         speed = 1.0
     speed = max(0.0, min(3.0, speed))
 
+    # Opt-in recording (INSIDEAI_RECORD): a passive tap on the exact events
+    # sent below. `emit` sends then records, so the recording is the live
+    # stream verbatim. Recorder is None when recording is off — zero overhead.
+    recorder: RunRecorder | None = None
+    effective_seed = engine.resolve_seed(params.seed)
+    if settings.record:
+        recorder = RunRecorder.start(
+            model_info=engine.model_info(),
+            prompt=prompt,
+            params=params,
+            effective_seed=effective_seed,
+            chat_mode=chat_mode,
+            speed=speed,
+        )
+
+    async def emit(event: dict) -> None:
+        await session.send(event)
+        if recorder is not None:
+            recorder.record(event)
+
     started = time.time()
     text = ""
     steps_done = 0
@@ -113,9 +161,9 @@ async def run_generation(session: Session, msg: dict) -> None:
             engine.encode_prompt, prompt, chat_mode
         )
         prompt_len = int(ids.shape[1])
-        generator = engine.make_generator(params.seed)
+        generator = engine.make_generator(effective_seed)
 
-        await session.send(
+        await emit(
             {
                 "type": "generation_start",
                 "prompt": prompt,
@@ -147,7 +195,7 @@ async def run_generation(session: Session, msg: dict) -> None:
                     )
 
             for event, delay in step_events(trace, step, engine.n_layer):
-                await session.send(event)
+                await emit(event)
                 if delay > 0 and speed > 0:
                     await asyncio.sleep(delay * speed)
 
@@ -157,7 +205,7 @@ async def run_generation(session: Session, msg: dict) -> None:
             )
             steps_done = step + 1
             text = engine.tokenizer.decode(ids[0][prompt_len:].tolist())
-            await session.send(
+            await emit(
                 {
                     "type": "step_end",
                     "step": step,
@@ -176,7 +224,7 @@ async def run_generation(session: Session, msg: dict) -> None:
                 break
 
         duration = time.time() - started
-        await session.send(
+        await emit(
             {
                 "type": "generation_end",
                 "text": text,
@@ -187,8 +235,9 @@ async def run_generation(session: Session, msg: dict) -> None:
             }
         )
     except asyncio.CancelledError:
+        reason = "cancelled"
         with contextlib.suppress(Exception):
-            await session.send(
+            await emit(
                 {
                     "type": "generation_end",
                     "text": text,
@@ -200,18 +249,65 @@ async def run_generation(session: Session, msg: dict) -> None:
             )
         raise
     except Exception as exc:  # surfaced to the client, logged with traceback
+        reason = "error"
         logger.exception("generation failed")
         with contextlib.suppress(Exception):
             await session.send(
                 {"type": "error", "message": f"{type(exc).__name__}: {exc}"}
             )
+    finally:
+        if recorder is not None:
+            recorder.finalize(text=text, steps=steps_done, reason=reason)
+
+
+async def replay_run(session: Session, msg: dict) -> None:
+    """Re-emit a recorded run's events over the same WebSocket protocol.
+
+    No model is touched: the events are read from disk and streamed verbatim,
+    honoring the client's speed control via the shared `base_delay` pacing. The
+    frontend can't tell a replayed event from a live one — that's the point —
+    so the client tags the stream as a replay on its side and shows the REPLAY
+    banner it requested.
+    """
+    run_id = str(msg.get("id", ""))
+    try:
+        speed = float(msg.get("speed", 1.0))
+    except (TypeError, ValueError):
+        speed = 1.0
+    speed = max(0.0, min(3.0, speed))
+
+    try:
+        events = await asyncio.to_thread(load_run_events, run_id)
+    except FileNotFoundError:
+        await session.send({"type": "error", "message": f"No such recorded run: {run_id!r}"})
+        return
+    except Exception as exc:
+        logger.exception("failed to load run %s", run_id)
+        await session.send({"type": "error", "message": f"Could not read run: {exc}"})
+        return
+
+    n_layer = 0
+    for event in events:
+        if event.get("type") == "model_info":
+            n_layer = int(event.get("n_layer", n_layer) or 0)
+        await session.send(event)
+        delay = base_delay(event, n_layer)
+        if delay > 0 and speed > 0:
+            await asyncio.sleep(delay * speed)
 
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     session = Session(ws)
-    await session.send({"type": "model_info", **engine.model_info()})
+    # When a model is loaded, model_info stays the first frame (unchanged live
+    # protocol). In replay-only mode there's no model to describe, so only the
+    # server_mode frame is sent — the recorded model_info arrives as the first
+    # replayed event instead. server_mode always follows so the client learns
+    # whether live generation is available.
+    if engine.loaded:
+        await session.send({"type": "model_info", **engine.model_info()})
+    await session.send({"type": "server_mode", "live": engine.loaded})
     try:
         while True:
             raw = await ws.receive_text()
@@ -226,6 +322,10 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 session.cancel()
                 await session.join_cancelled()
                 session.task = asyncio.create_task(run_generation(session, msg))
+            elif msg_type == "replay":
+                session.cancel()
+                await session.join_cancelled()
+                session.task = asyncio.create_task(replay_run(session, msg))
             elif msg_type == "stop":
                 session.cancel()
             elif msg_type == "ping":

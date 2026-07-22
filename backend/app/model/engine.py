@@ -253,9 +253,15 @@ class TransformerEngine:
     def eos_id(self) -> int | None:
         return self.tokenizer.eos_token_id
 
+    def resolve_seed(self, seed: int | None) -> int:
+        """The concrete seed a generation will use: the requested one, or a
+        fresh time-based seed when none was given. Resolving up front lets a
+        recording capture the actual seed so a 'random' run stays reproducible."""
+        return seed if seed is not None else int(time.time_ns() % (2**31))
+
     def make_generator(self, seed: int | None) -> torch.Generator:
         gen = torch.Generator(device=self.device.type)
-        gen.manual_seed(seed if seed is not None else int(time.time_ns() % (2**31)))
+        gen.manual_seed(self.resolve_seed(seed))
         return gen
 
     # ------------------------------------------------------------ encoding
