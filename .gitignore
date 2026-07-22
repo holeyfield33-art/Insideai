@@ -16,3 +16,6 @@ frontend/tsconfig.tsbuildinfo
 
 # Test artifacts
 frontend/scripts/*.png
+
+# Recorded runs (INSIDEAI_RECORD=1) — local reproducibility artifacts, not source
+results/

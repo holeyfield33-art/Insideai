@@ -4,9 +4,36 @@
 
 import { useSimStore } from "./store";
 import type { GenerationParamsUI } from "./store";
-import type { ServerEvent } from "./types";
+import type { RunSummary, ServerEvent } from "./types";
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://127.0.0.1:8000/ws";
+
+/** Derive the HTTP base (for GET /runs) from the WebSocket URL: ws->http,
+ *  wss->https, dropping the trailing /ws path. */
+function httpBase(): string {
+  try {
+    const u = new URL(WS_URL);
+    u.protocol = u.protocol === "wss:" ? "https:" : "http:";
+    u.pathname = u.pathname.replace(/\/ws\/?$/, "");
+    return u.origin + u.pathname;
+  } catch {
+    return "http://127.0.0.1:8000";
+  }
+}
+
+/** Fetch the list of recorded runs available for replay. Returns [] on error
+ *  (e.g. an older backend without the /runs endpoint) so the UI degrades
+ *  gracefully rather than throwing. */
+export async function fetchRuns(): Promise<RunSummary[]> {
+  try {
+    const res = await fetch(`${httpBase()}/runs`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = (await res.json()) as RunSummary[];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
 
 class SimSocket {
   private ws: WebSocket | null = null;
@@ -91,6 +118,8 @@ class SimSocket {
 
   generate(prompt: string, params: GenerationParamsUI): boolean {
     const seed = params.seed.trim() === "" ? null : Number(params.seed);
+    // A live run clears any replay indicator: what's on screen is now live.
+    useSimStore.getState().setReplaying(false);
     return this.send({
       type: "generate",
       prompt,
@@ -103,6 +132,15 @@ class SimSocket {
       seed: Number.isFinite(seed as number) ? seed : null,
       speed: params.speed,
     });
+  }
+
+  /** Replay a recorded run over the same protocol. The events are identical
+   *  to a live run, so the client flags the stream as a replay here — that
+   *  flag is the only thing distinguishing a recording from the real thing. */
+  replay(id: string, speed: number): boolean {
+    const ok = this.send({ type: "replay", id, speed });
+    if (ok) useSimStore.getState().setReplaying(true);
+    return ok;
   }
 
   stop(): boolean {

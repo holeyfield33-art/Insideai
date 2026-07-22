@@ -8,6 +8,8 @@ import ErrorToast from "@/components/hud/ErrorToast";
 import PipelineStatus from "@/components/hud/PipelineStatus";
 import ProbabilityPanel from "@/components/hud/ProbabilityPanel";
 import PromptInput from "@/components/hud/PromptInput";
+import ReplayBanner from "@/components/hud/ReplayBanner";
+import RunPicker from "@/components/hud/RunPicker";
 import TokenGenerationAnimation from "@/components/hud/TokenGenerationAnimation";
 import TopBar from "@/components/hud/TopBar";
 import Scene from "@/components/scene/Scene";
@@ -37,10 +39,12 @@ export default function Simulator() {
           z-20 keeps panels above drei <Html> labels (zIndexRange caps at 10). */}
       <div className="pointer-events-none absolute inset-0 z-20 flex flex-col">
         <TopBar />
+        <ReplayBanner />
 
         <div className="flex min-h-0 flex-1 items-start justify-between gap-3 px-3 pt-2">
           <div className="hidden max-h-full w-72 flex-col gap-3 overflow-y-auto pb-2 md:flex">
             <PipelineStatus />
+            <RunPicker />
             <AnomalyEkgPanel />
             <AttentionPanel />
           </div>
