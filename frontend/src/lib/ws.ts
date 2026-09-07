@@ -15,7 +15,9 @@ function httpBase(): string {
     const u = new URL(WS_URL);
     u.protocol = u.protocol === "wss:" ? "https:" : "http:";
     u.pathname = u.pathname.replace(/\/ws\/?$/, "");
-    return u.origin + u.pathname;
+    // Setting pathname to "" normalizes back to "/" on a URL with a host, so
+    // strip it explicitly — otherwise every request below gets a double slash.
+    return (u.origin + u.pathname).replace(/\/$/, "");
   } catch {
     return "http://127.0.0.1:8000";
   }
