@@ -1,19 +1,5 @@
-/**
- * Two validated educational palettes — dark ("chalkboard") and light
- * ("textbook") — same semantic color language in both:
- * green = input, blue = processing, red = output, amber = computing now.
- *
- * Both were checked with the dataviz six-checks validator against their card
- * surface (CVD ΔE of the green/red identity pair ≥ 12 under protan/deutan,
- * ≥ 3:1 contrast, lightness bands, chroma floor):
- *   dark  (#131722): #2aa35d / #e0564f (ΔE 14.4) · accent #4d84ea · amber #cc7d0a
- *   light (#ffffff): #0f8a3d / #d94343 (ΔE 12.9) · accent #2a5bd7 · amber #d97706
- * Sequential ramps are single-hue, monotone lightness, anchored at the
- * surface (dark-anchored on dark, light-anchored on light).
- *
- * Exports are live bindings switched by applyTheme(); the 3D scene remounts
- * on theme change so every material picks up the new values.
- */
+/** Instrument palette. Semantic input / processing / output colors use
+ * labels as a second encoding; no colorblind-validation claim is made here. */
 import { scaleLinear } from "d3-scale";
 
 export type ThemeName = "dark" | "light";
@@ -53,82 +39,80 @@ export interface SceneStyle {
 
 const PALETTES: Record<ThemeName, Palette> = {
   dark: {
-    page: "#0b0e17",
-    surface: "#131722",
-    raised: "#1c2333",
-    ink: "#e9edf9",
-    ink2: "#a9b3ce",
-    ink3: "#6e7893",
-    grid: "#29314a",
-    accent: "#4d84ea",
-    accentTrack: "#21315a",
-    promptToken: "#2aa35d",
-    generatedToken: "#e0564f",
-    active: "#cc7d0a",
-    danger: "#e0564f",
+    page: "#101412",
+    surface: "#191c1b",
+    raised: "#242927",
+    ink: "#f0f2ee",
+    ink2: "#bfc7c0",
+    ink3: "#929d95",
+    grid: "#333a35",
+    accent: "#df9c6c",
+    accentTrack: "#493326",
+    promptToken: "#64b5a0",
+    generatedToken: "#e3bf61",
+    active: "#df9c6c",
+    danger: "#f28579",
   },
   light: {
-    page: "#f4f6fb",
+    page: "#eff2ef",
     surface: "#ffffff",
-    raised: "#f1f4fa",
-    ink: "#17203a",
-    ink2: "#4c5670",
-    ink3: "#8a93ab",
-    grid: "#dfe4f0",
-    accent: "#2a5bd7",
-    accentTrack: "#dbe5fb",
-    promptToken: "#0f8a3d",
-    generatedToken: "#d94343",
-    active: "#d97706",
-    danger: "#c02626",
+    raised: "#e4eae5",
+    ink: "#19251e",
+    ink2: "#46574b",
+    ink3: "#5b6d61",
+    grid: "#c9d3cc",
+    accent: "#9a471b",
+    accentTrack: "#efd9c9",
+    promptToken: "#167561",
+    generatedToken: "#8b650b",
+    active: "#9a471b",
+    danger: "#b83429",
   },
 };
 
 const SCENES: Record<ThemeName, SceneStyle> = {
   dark: {
-    background: "#0b0e17",
-    nodeRim: "#dfe5f5",
-    edge: "#86abf1",
-    edgeFaint: "#2b3552",
-    slabFill: "#1a2135",
-    slabEdge: "#8ea0c6",
-    towerBlue: "#5b89e6",
-    beam: "#41547f",
-    axis: "#5d6890",
-    dropline: "#3a4663",
-    gridMajor: "#232b42",
-    gridMinor: "#151b2a",
+    background: "#101412",
+    nodeRim: "#e9eee8",
+    edge: "#edb894",
+    edgeFaint: "#3b423c",
+    slabFill: "#222c26",
+    slabEdge: "#708378",
+    towerBlue: "#cb875a",
+    beam: "#66796c",
+    axis: "#6e8073",
+    dropline: "#35493c",
+    gridMajor: "#293a2e",
+    gridMinor: "#1a241d",
     ambient: 0.85,
     directional: 0.5,
   },
   light: {
-    background: "#f6f8fc",
-    nodeRim: "#26304f",
-    edge: "#2f3e9e",
-    edgeFaint: "#ccd3ea",
-    slabFill: "#e9edf9",
-    slabEdge: "#3a4468",
-    towerBlue: "#4a7ade",
-    beam: "#9db1e8",
-    axis: "#8a93ab",
-    dropline: "#aeb9d6",
-    gridMajor: "#ccd5ea",
-    gridMinor: "#e4e9f5",
+    background: "#e8efea",
+    nodeRim: "#213b2b",
+    edge: "#9a471b",
+    edgeFaint: "#b4c6b9",
+    slabFill: "#f0f2ee",
+    slabEdge: "#536c5c",
+    towerBlue: "#b46736",
+    beam: "#a2b5a8",
+    axis: "#5b6d61",
+    dropline: "#a2b5a8",
+    gridMajor: "#bccdc1",
+    gridMinor: "#d5e0d8",
     ambient: 1.05,
     directional: 0.65,
   },
 };
 
 const RAMPS: Record<ThemeName, { attn: string[]; act: string[] }> = {
-  // dark-anchored: near-surface dark = 0, bright = 1
   dark: {
-    attn: ["#161b2e", "#1d2a4c", "#243d74", "#2c53a1", "#3a6cc9", "#5b89e6", "#86abf1", "#b6d0f9", "#e4eefd"],
-    act: ["#13211c", "#183a2f", "#1e5343", "#256d56", "#2e8869", "#48a37f", "#73bd9c", "#a6d7c0", "#def3e8"],
+    attn: ["#191c1b", "#392a20", "#5e3c26", "#875532", "#b07445", "#ce956b", "#e4b18a", "#f4cfad", "#ffe9d6"],
+    act: ["#14221c", "#1d372a", "#294e3b", "#37674c", "#47835e", "#639d76", "#88b894", "#b2d5b7", "#e0f0df"],
   },
-  // light-anchored: near-white = 0, dark = 1
   light: {
-    attn: ["#f3f7fe", "#dfe9fc", "#c2d4f9", "#9dbaf3", "#749aea", "#4e7bdf", "#2a5bd7", "#1d44a9", "#132f78"],
-    act: ["#effbf7", "#d2f1e6", "#ace2d0", "#7fceb5", "#52b497", "#2c977b", "#127a61", "#0a604c", "#064a3b"],
+    attn: ["#fff7ef", "#f7dfc8", "#ebbe98", "#d89a6d", "#bd7947", "#a35a2f", "#813f1c", "#602c13", "#411b0c"],
+    act: ["#f1faf5", "#d5eddd", "#aed7bc", "#87bc9a", "#639f7a", "#41815c", "#26613f", "#154829", "#0c321c"],
   },
 };
 

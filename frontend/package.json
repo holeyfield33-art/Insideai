@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:e2e": "node scripts/e2e.js"
+    "test:e2e": "node scripts/e2e.js",
+    "test:telemetry": "node scripts/telemetry-test.cjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",

@@ -125,13 +125,13 @@ export default function AttentionVisualizer({
             self-attention
           </div>
           <div className="mt-0.5 text-[11px] text-ink2">
-            each arc = one token looking back at an earlier token · darker = stronger
+            each arc = one token looking back at an earlier token · brighter = stronger
           </div>
           <div className="font-mono text-[10px] text-ink3">
             {att
               ? `layer ${selectedLayer} · ${
                   selectedHead === -1 || !att.heads ? "average of all heads" : `head ${selectedHead}`
-                } · red arcs = the token being generated`
+                } · gold arcs = newest token`
               : "arcs appear while the model reads your prompt"}
           </div>
         </div>

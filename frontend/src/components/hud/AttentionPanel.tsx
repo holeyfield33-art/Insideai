@@ -17,6 +17,7 @@ import { useSimStore } from "@/lib/store";
 const CANVAS_PX = 512;
 
 export default function AttentionPanel() {
+  const theme = useSimStore((s) => s.theme);
   const attention = useSimStore((s) => s.attention);
   const tokens = useSimStore((s) => s.tokens);
   const layerMeta = useSimStore((s) => s.layerMeta);
@@ -68,7 +69,7 @@ export default function AttentionPanel() {
     octx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(off, 0, 0, CANVAS_PX, CANVAS_PX);
-  }, [matrix]);
+  }, [matrix, theme]);
 
   const n = matrix?.length ?? 0;
   const hoverInfo =
@@ -154,14 +155,14 @@ export default function AttentionPanel() {
           ref={canvasRef}
           width={CANVAS_PX}
           height={CANVAS_PX}
-          onMouseMove={(e) => {
+          onPointerMove={(e) => {
             if (!n) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const j = Math.floor(((e.clientX - rect.left) / rect.width) * n);
             const i = Math.floor(((e.clientY - rect.top) / rect.height) * n);
             setHover({ i: Math.min(i, n - 1), j: Math.min(j, n - 1) });
           }}
-          onMouseLeave={() => setHover(null)}
+          onPointerLeave={() => setHover(null)}
           className="aspect-square w-full rounded-lg border border-grid"
         />
         {matrix === null && (

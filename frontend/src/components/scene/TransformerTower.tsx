@@ -20,6 +20,8 @@ const BASE_Y = 0.45;
 export const slabSpacing = (nLayer: number) => Math.min(1.15, 16 / Math.max(nLayer, 1));
 
 export default function TransformerTower({ origin }: { origin: readonly [number, number, number] }) {
+  const selectedLayer = useSimStore((s) => s.selectedLayer);
+  const selectLayer = useSimStore((s) => s.setSelectedLayer);
   const nLayer = useSimStore((s) => s.modelInfo?.n_layer ?? 0);
   const nEmbd = useSimStore((s) => s.modelInfo?.n_embd ?? 0);
   const layerMeta = useSimStore((s) => s.layerMeta);
@@ -100,10 +102,10 @@ export default function TransformerTower({ origin }: { origin: readonly [number,
             transformer stack
           </div>
           <div className="mt-0.5 text-[11px] text-ink2">
-            the token's meaning passes through {nLayer} layers, bottom to top
+            {nLayer} layers · click a slab to inspect
           </div>
           <div className="font-mono text-[10px] text-ink3">
-            amber = computing now · deeper blue = layer changed the meaning more · d={nEmbd}
+            copper = computing · fill intensity = residual change · d={nEmbd}
           </div>
         </div>
       </Html>
@@ -125,6 +127,7 @@ export default function TransformerTower({ origin }: { origin: readonly [number,
               slabMeshes.current[i] = m;
               if (m) m.scale.y = thickness;
             }}
+            onClick={(event) => { event.stopPropagation(); selectLayer(i); }}
             geometry={slabGeo}
           >
             <meshStandardMaterial
@@ -136,7 +139,7 @@ export default function TransformerTower({ origin }: { origin: readonly [number,
               metalness={0}
             />
             <lineSegments geometry={slabEdges}>
-              <lineBasicMaterial color={scene.slabEdge} transparent opacity={0.85} />
+              <lineBasicMaterial color={selectedLayer === i ? palette.accent : scene.slabEdge} transparent opacity={0.85} />
             </lineSegments>
           </mesh>
           {i % labelEvery === 0 && (

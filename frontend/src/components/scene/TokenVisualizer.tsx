@@ -2,7 +2,7 @@
 
 /**
  * Tokens in reading order on a straight line — the base of the attention arc
- * diagram. Green = input (your prompt), red = output (generated), the same
+ * diagram. Green = input (your prompt), gold = output (generated), the same
  * semantic colors as the classic input→output network figure. The newest
  * token pulses while the model works on it.
  */

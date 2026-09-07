@@ -61,6 +61,8 @@ export default function RunPicker() {
         </h2>
         <button
           onClick={() => void refresh()}
+          aria-label="Refresh recorded runs"
+          disabled={loading || connection !== "open"}
           title="Reload the list of recorded runs"
           className="font-mono text-[10px] text-ink3 transition-colors hover:text-ink"
         >
@@ -78,7 +80,7 @@ export default function RunPicker() {
         <p className="text-[10px] text-ink3">
           {loading
             ? "loading runs…"
-            : "No recorded runs yet. Set INSIDEAI_RECORD=1 and generate to capture one."}
+            : "No recordings found. Enable recording in your backend configuration to capture a run."}
         </p>
       ) : (
         <div className="flex max-h-48 flex-col gap-1 overflow-y-auto pr-1">
@@ -88,7 +90,7 @@ export default function RunPicker() {
               <button
                 key={r.id}
                 onClick={() => replay(r.id)}
-                disabled={running && !active}
+                disabled={connection !== "open" || (running && !active)}
                 title={`${r.prompt}\n${r.model ?? ""} · ${r.steps} steps · ${r.id}`}
                 className={`rounded-lg border px-2 py-1.5 text-left transition-colors disabled:opacity-40 ${
                   active

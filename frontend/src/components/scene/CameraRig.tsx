@@ -1,8 +1,8 @@
 "use client";
 
 import { OrbitControls } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
-import { useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
@@ -27,6 +27,8 @@ const TOUR_DWELL_S = 7;
 const NAV_WINDOW_S = 3;
 
 export default function CameraRig() {
+  const { camera, gl } = useThree();
+  const reducedMotion = useRef(false);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const posTarget = useRef(new THREE.Vector3(...ANCHORS.overview.pos));
   const lookTarget = useRef(new THREE.Vector3(...ANCHORS.overview.target));
@@ -35,6 +37,33 @@ export default function CameraRig() {
   const tourTime = useRef(0);
   const lastFocusNonce = useRef(-1);
   const navRemaining = useRef(NAV_WINDOW_S); // initial glide to overview
+
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => { reducedMotion.current = preference.matches; };
+    sync(); preference.addEventListener("change", sync);
+    const onKey = (event: KeyboardEvent) => {
+      const controls = controlsRef.current;
+      if (!controls || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "+", "=", "-", "Home"].includes(event.key)) return;
+      event.preventDefault();
+      useSimStore.getState().setCinematic(false);
+      navRemaining.current = 0;
+      if (event.key === "Home") { useSimStore.getState().setFocusZone(useSimStore.getState().focusZone); return; }
+      const spherical = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+      if (event.key === "ArrowLeft") spherical.theta -= .12;
+      if (event.key === "ArrowRight") spherical.theta += .12;
+      if (event.key === "ArrowUp") spherical.phi -= .1;
+      if (event.key === "ArrowDown") spherical.phi += .1;
+      if (event.key === "+" || event.key === "=") spherical.radius *= .9;
+      if (event.key === "-") spherical.radius *= 1.1;
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi, .1, Math.PI * .52);
+      spherical.radius = THREE.MathUtils.clamp(spherical.radius, 3, 140);
+      camera.position.copy(new THREE.Vector3().setFromSpherical(spherical).add(controls.target));
+      camera.lookAt(controls.target); controls.update();
+    };
+    gl.domElement.addEventListener("keydown", onKey);
+    return () => { preference.removeEventListener("change", sync); gl.domElement.removeEventListener("keydown", onKey); };
+  }, [camera, gl]);
 
   useFrame((state, dt) => {
     const { cinematic, focusZone, focusNonce, running, modelInfo } = useSimStore.getState();
@@ -76,7 +105,7 @@ export default function CameraRig() {
         posTarget.current.set(...anchor.pos);
         lookTarget.current.set(...anchor.target);
       }
-      const k = 1 - Math.exp(-dt * 3.2);
+      const k = reducedMotion.current ? 1 : 1 - Math.exp(-dt * 5);
       state.camera.position.lerp(posTarget.current, k);
       controls.target.lerp(lookTarget.current, k);
     }
