@@ -38,6 +38,7 @@ from unitarity_labs.core.universal_hook import UniversalHookWrapper
 
 from ..config import settings
 from . import reduce
+from .telemetry import telemetry_fields
 
 
 @dataclass(frozen=True)
@@ -246,6 +247,11 @@ class TransformerEngine:
             "max_new_tokens_cap": settings.max_new_tokens_cap,
             "positional_kind": "learned (wpe)" if self.family == "gpt2" else "rotary (RoPE)",
             "device": str(self.device),
+            "dtype": str(next(self.model.parameters()).dtype).removeprefix("torch."),
+            "cuda_version": torch.version.cuda,
+            "gpu_model": torch.cuda.get_device_name(self.device) if self.device.type == "cuda" else None,
+            "gpu_vram_bytes": torch.cuda.get_device_properties(self.device).total_memory if self.device.type == "cuda" else None,
+            "model_revision": getattr(self.model.config, "_commit_hash", None),
             "load_seconds": self.load_seconds,
         }
 
@@ -354,6 +360,10 @@ class TransformerEngine:
         # — every layer this step shares that same reading rather than a
         # fake distinct-per-layer value.
         telemetry = self._telemetry_hook.read() if self._telemetry_hook is not None else None
+        observation = telemetry_fields(
+            telemetry,
+            self._telemetry_hook.rupture_detector if self._telemetry_hook is not None else None,
+        )
         for i, attn_batch in enumerate(attentions):
             attn = attn_batch[0].float()  # (n_head, q_len, k_len)
             rows = attn[:, -1, :]  # newest query position: (n_head, k_len)
@@ -410,13 +420,8 @@ class TransformerEngine:
                     "ffn": ffn,
                     "hidden_norm": hidden_norm,
                     "residual_delta": residual_delta,
-                    # Real telemetry from unitarity-lab's passive-mode hook
-                    # (zeta_raw: signed cosine coherence between the bridge's
-                    # source/sink layers; flagged: VAR's calibrated rupture
-                    # detector on spectral_gap). 0.0/False before the hook has
-                    # a reading yet (e.g. telemetry unavailable for this model).
-                    "zeta_proxy": telemetry["zeta_raw"] if telemetry else 0.0,
-                    "flagged": telemetry["flagged"] if telemetry else False,
+                    # One shared step observation; absent values stay null.
+                    **observation,
                 }
             )
         return layers

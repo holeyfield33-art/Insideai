@@ -18,6 +18,7 @@ recorded model, with no live model loaded.
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import platform
 import re
@@ -30,13 +31,6 @@ from .config import settings
 
 logger = logging.getLogger("insideai.recording")
 
-# The two telemetry deps are installed from pinned git commits; these mirror
-# backend/requirements.txt as a last-resort source for the manifest when the
-# installed distribution metadata can't be read.
-_FALLBACK_PINS = {
-    "unitarity-labs": "1dfe4e52771eb2fd82f4def61d1e740f3c61b77d",
-    "var": "31234551e524249a5e81453ec851c98ec8836fb7",
-}
 
 
 def _slug(text: str) -> str:
@@ -65,8 +59,8 @@ def _pkg_commit(dist_name: str) -> str | None:
     """Read the git commit a distribution was installed from (PEP 610).
 
     pip writes ``direct_url.json`` with ``vcs_info.commit_id`` for git installs;
-    this is the authoritative record of what's actually running. Falls back to
-    the pin declared in requirements.txt if metadata is unavailable.
+    this is the authoritative record of what's actually running. Unknown
+    installed provenance stays null; declared pins are not execution evidence.
     """
     try:
         import importlib.metadata as im
@@ -79,7 +73,7 @@ def _pkg_commit(dist_name: str) -> str | None:
                 return commit
     except Exception:
         pass
-    return _FALLBACK_PINS.get(dist_name)
+    return None
 
 
 def _pkg_version(module_name: str) -> str | None:
@@ -196,6 +190,9 @@ class RunRecorder:
     def finalize(self, *, text: str, steps: int, reason: str) -> None:
         """Write manifest.json and close the log. Safe to call once."""
         try:
+            self._fh.flush()
+            with self._path.open("rb") as recorded:
+                event_hash = hashlib.file_digest(recorded, "sha256").hexdigest()
             manifest = {
                 "id": self.run_dir.name,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -214,6 +211,13 @@ class RunRecorder:
                 "n_layer": self.model_info.get("n_layer"),
                 "n_head": self.model_info.get("n_head"),
                 "family": self.model_info.get("family"),
+                "device": self.model_info.get("device"),
+                "dtype": self.model_info.get("dtype"),
+                "model_revision": self.model_info.get("model_revision"),
+                "cuda_version": self.model_info.get("cuda_version"),
+                "gpu_model": self.model_info.get("gpu_model"),
+                "gpu_vram_bytes": self.model_info.get("gpu_vram_bytes"),
+                "events_sha256": event_hash,
             }
             (self.run_dir / "manifest.json").write_text(
                 json.dumps(manifest, indent=2), encoding="utf-8"

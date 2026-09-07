@@ -4,13 +4,17 @@
 (MIT). Extended into a live LLM flight-recorder / telemetry viewer — a
 per-layer anomaly/telemetry pipe on top of the original 3D visualization.*
 
-**Watch a real AI model think.** InsideAI runs a genuine language model on
-your machine and turns every step of its computation into a live, interactive
-3D visualization — tokenization, embeddings, attention, neurons firing,
-probabilities, sampling, and the answer streaming out. No videos, no papers,
-no mock data: what you see is the model, running.
+InsideAI is an interactive model observatory: inspect real attention,
+embeddings, layer residuals, pooled neurons, and generated tokens in a 3D
+workspace, with a separate measured telemetry trace.
 
-![Attention arc diagram](docs/screenshots/attention.png)
+The workbench keeps the 3D stage unobstructed, docks inspection/output/replay
+tools alongside it, and makes every panel accessible on smaller screens.
+Copper marks processing, teal marks input, and gold marks output; labels
+provide a second encoding. Dark and light modes share the same layout.
+
+Telemetry is observational research evidence, not a model-health verdict.
+See [the workbench change notes](docs/WORKBENCH.md) for validation and limits.
 
 ## Is there a real LLM behind this?
 
@@ -38,17 +42,22 @@ detection, but hasn't been exercised with the telemetry hook here.
 
 ## What you'll see
 
-| | |
-|---|---|
-| ![Neurons](docs/screenshots/neurons.png) | **Neurons** — the classic textbook network, live: green input → blue hidden neurons → red output. Wire brightness = real connection strength × the signal flowing through it, one pulse per generated token. |
-| ![Embeddings](docs/screenshots/embeddings.png) | **Embeddings** — every token becomes a point in space (PCA view of the real vectors); similar meanings sit close together. |
-| ![Layers](docs/screenshots/layers.png) | **Layers** — the transformer stack. Amber = computing right now; deeper blue = that layer changed the meaning more. |
-| ![Pipeline](docs/screenshots/pipeline.png) | **Pipeline** — the whole journey with live examples: words → token ids → vectors → 24 layers → scores → one word chosen → text streaming out. |
+- **Overview / Embeddings / Attention / Layers / Neurons:** five interactive
+  spatial views. Focused views isolate the selected structure.
+- **Inspect:** layer/head attention maps and the computation pipeline.
+- **Output:** the actual next-token probability distribution.
+- **Runs:** recorded-run selection with a persistent replay label.
+- **Step telemetry:** cross-layer coherence on a fixed −1…+1 scale, or the
+  spectral-gap input to the detector, with calibration/threshold metadata
+  when available. One chart point per generation step, independent of depth.
 
-Plus a per-head attention heatmap, top-10 probability panel with the sampled
-token highlighted, a token stream (green = your prompt, red = generated), and
-an **Auto Tour** that flies the camera through the pipeline once per
-generation.
+Drag to orbit, scroll/pinch to zoom, or right-drag to pan. Focus the 3D canvas
+and use arrow keys to orbit, +/− to zoom, and Home to reset. Click a layer slab
+to select it. Auto Tour is opt-in and gives control back when you interact.
+Camera navigation respects reduced-motion preferences.
+
+The images in `docs/screenshots/` document the previous interface and have not
+been regenerated for this workbench.
 
 ## Live telemetry — the flight-recorder pipe
 
@@ -66,11 +75,13 @@ now streams a real telemetry reading over the same WebSocket:
   It comes from [VAR](https://github.com/holeyfield33-art/VAR)'s
   `SpectralRuptureDetector` (median/MAD baseline with hysteresis), which
   `PassiveTelemetryHook` calls out to rather than reimplementing.
-  `spectral_gap` itself feeds that detector internally; it isn't currently
-  forwarded onto the WebSocket, only `zeta_proxy` and `flagged` are.
+  `spectral_gap`, calibration state, and the available finite threshold are
+  forwarded with the reading. The detector baseline belongs to the backend
+  session, not to each individual prompt; the UI labels that scope.
 - **The anomaly/EKG HUD panel** (`AnomalyEkgPanel.tsx`) — a live sparkline of
-  `zeta_proxy` plus a per-layer chip row, so you can see which layer produced
-  the most recent reading as generation runs.
+  one point per generation step. Its spectral-gap view displays the detector
+  input. Older recordings remain compatible and show missing fields as
+  unavailable. Layer coverage is retained separately in the event store.
 
 One reading is taken per forward pass and shared across every layer in that
 step — a real per-step signal, not a fake per-layer value. Verified live on
@@ -140,7 +151,7 @@ Or run both servers at once with `scripts\dev-all.ps1`.
 | **✦ Auto Tour** | one guided camera pass through the pipeline per generation |
 | **Attention panel** | pick any layer and head; hover the heatmap for exact query→key weights |
 | **⚙ settings** | tokens, temperature, top-k, top-p, repetition penalty, Chat/Raw mode, pacing (Cinematic/Fast/Instant), seed |
-| **☾ / ☀** | dark ↔ light theme (both colorblind-validated) |
+| **Light / Dark** | switch between matching instrument themes |
 | **Chat vs Raw** | Chat applies the model's chat template (it answers you); Raw continues your text |
 | **seed** | fixed seed → identical run, great for demos |
 
@@ -197,6 +208,21 @@ as trustworthy as the code producing it:
 | [`VAR`](https://github.com/holeyfield33-art/VAR) | `31234551e524249a5e81453ec851c98ec8836fb7` (unitarity-lab's own pin, installed transitively) | source of `SpectralRuptureDetector` / `flagged` |
 
 ## Testing
+
+Model-free regression checks:
+
+```bash
+python backend/scripts/telemetry_test.py
+cd frontend
+npm ci
+npm run test:telemetry
+npm run build
+```
+
+The frontend regression script requires Node 22.12+ (for CommonJS loading of
+an ESM dependency); the application retains its existing Node requirements.
+These checks do not replace live inference or browser testing.
+
 
 Requires a backend already running (see Quick start) and, for the two
 WebSocket tests, the `websockets` package in the backend venv

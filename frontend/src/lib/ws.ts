@@ -118,9 +118,8 @@ class SimSocket {
 
   generate(prompt: string, params: GenerationParamsUI): boolean {
     const seed = params.seed.trim() === "" ? null : Number(params.seed);
-    // A live run clears any replay indicator: what's on screen is now live.
-    useSimStore.getState().setReplaying(false);
-    return this.send({
+    if (useSimStore.getState().liveModel === false) return false;
+    const ok = this.send({
       type: "generate",
       prompt,
       max_new_tokens: params.max_new_tokens,
@@ -132,6 +131,8 @@ class SimSocket {
       seed: Number.isFinite(seed as number) ? seed : null,
       speed: params.speed,
     });
+    if (ok) useSimStore.getState().setReplaying(false);
+    return ok;
   }
 
   /** Replay a recorded run over the same protocol. The events are identical

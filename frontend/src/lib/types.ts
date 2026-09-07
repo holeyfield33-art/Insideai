@@ -36,6 +36,8 @@ export interface ModelInfo {
   max_new_tokens_cap: number;
   positional_kind: string;
   device: string;
+  dtype?: string;
+  model_revision?: string | null;
   load_seconds: number;
 }
 
@@ -168,8 +170,12 @@ export type ServerEvent =
       type: "anomaly";
       step: number;
       layer: number;
-      zeta_proxy: number;
-      flagged: boolean;
+      zeta_proxy: number | null;
+      flagged: boolean | null;
+      spectral_gap?: number | null;
+      calibrated?: boolean | null;
+      threshold?: number | null;
+      calibration_scope?: string | null;
       source: string;
     }
   | ({ type: "logits"; step: number } & LogitsData)

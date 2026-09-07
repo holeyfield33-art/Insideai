@@ -28,13 +28,10 @@ const problems = [];
   step("load " + URL);
   await page.goto(URL, { waitUntil: "domcontentloaded" });
 
-  step("wait for model_info over websocket (model chip)");
-  await page.waitForSelector("text=/\\d+ layers/", { timeout: 30000 });
-  const chip = await page.textContent("text=/\\d+ layers/");
-  ok(`model chip shows "${chip?.trim()}" (WS model_info applied)`);
-
-  await page.waitForSelector("text=live", { timeout: 15000 });
-  ok("connection status: live");
+  step("wait for model_info over websocket");
+  await page.waitForFunction(() => document.querySelector(".header-model strong")?.textContent !== "No model connected", undefined, { timeout: 30000 });
+  await page.locator(".connection-state").filter({ hasText: "Ready" }).waitFor({ timeout: 15000 });
+  ok("model connected and ready");
 
   const canvases = await page.evaluate(() =>
     Array.from(document.querySelectorAll("canvas")).map((c) => `${c.width}x${c.height}`)
@@ -48,8 +45,8 @@ const problems = [];
   ok("probe: Generate disabled while prompt is empty");
 
   step("open settings, set pacing to Instant, 12 tokens");
-  await page.click("button[title='Generation settings']");
-  await page.click("button:has-text('Instant')");
+  await page.locator(".generation-settings > summary").click();
+  await page.getByLabel("Playback pacing").selectOption("0");
   await page.locator("input[type='range']").first().fill("12"); // new-tokens slider
   ok("pacing = Instant, max_new_tokens = 12");
 
@@ -68,6 +65,7 @@ const problems = [];
   );
   ok(`generated token chips visible: ${chipCount}`);
 
+  await page.getByRole("tab", { name: "Output", exact: true }).click();
   await page.waitForSelector("text=entropy", { timeout: 30000 });
   ok("probability panel live (entropy readout present)");
 
@@ -80,8 +78,8 @@ const problems = [];
   ok("screenshot shot1-instant-done.png");
 
   step("PROBE: cinematic run, then Stop mid-generation");
-  // exact:true avoids the TopBar "✦ Cinematic" camera toggle
-  await page.getByRole("button", { name: "Cinematic", exact: true }).click();
+  // Pacing is independent of the opt-in camera tour.
+  await page.getByLabel("Playback pacing").selectOption("1");
   await page.fill("textarea", "Once upon a time, a robot");
   await page.click("button:has-text('Generate')");
   await page.waitForSelector("button:has-text('Stop')", { timeout: 15000 });
@@ -94,7 +92,7 @@ const problems = [];
 
   step("PROBE: immediately start a fresh run after cancel");
   await page.fill("textarea", "The moon is");
-  await page.click("button:has-text('Instant')");
+  await page.getByLabel("Playback pacing").selectOption("0");
   await page.click("button:has-text('Generate')");
   // The regression target is a clean restart: the run begins (Stop appears)
   // and no error toast shows — a full extra generation isn't needed.

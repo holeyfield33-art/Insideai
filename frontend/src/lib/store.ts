@@ -58,8 +58,12 @@ export interface LayerMeta {
 export interface AnomalyPoint {
   step: number;
   layer: number;
-  zetaProxy: number;
-  flagged: boolean;
+  zetaProxy: number | null;
+  flagged: boolean | null;
+  spectralGap: number | null;
+  calibrated: boolean | null;
+  threshold: number | null;
+  calibrationScope: string | null;
 }
 
 export interface GenerationParamsUI {
@@ -113,7 +117,7 @@ interface SimState {
   layerMeta: (LayerMeta | null)[];
   /** Latest zeta_proxy reading per layer, for the layer-chip row. */
   anomalyLatest: (AnomalyPoint | null)[];
-  /** Rolling window across all layers/steps, oldest first — the EKG trace.
+  /** Rolling window of independent generation steps, oldest first — the EKG trace.
       Capped so a long generation doesn't grow this unbounded. */
   anomalyHistory: AnomalyPoint[];
 
@@ -319,13 +323,25 @@ export const useSimStore = create<SimState>((set, get) => ({
         const point: AnomalyPoint = {
           step: ev.step,
           layer: ev.layer,
-          zetaProxy: ev.zeta_proxy,
+          zetaProxy: typeof ev.zeta_proxy === "number" && Number.isFinite(ev.zeta_proxy) ? ev.zeta_proxy : null,
+          spectralGap: typeof ev.spectral_gap === "number" && Number.isFinite(ev.spectral_gap) ? ev.spectral_gap : null,
+          calibrated: ev.calibrated ?? null,
+          threshold: typeof ev.threshold === "number" && Number.isFinite(ev.threshold) ? ev.threshold : null,
+          calibrationScope: ev.calibration_scope ?? null,
           flagged: ev.flagged,
         };
         const anomalyLatest = get().anomalyLatest.slice();
         anomalyLatest[ev.layer] = point;
-        const HISTORY_CAP = 600; // ~ a few full generations of layer ticks
-        const anomalyHistory = [...get().anomalyHistory, point].slice(-HISTORY_CAP);
+        const HISTORY_CAP = 600; // independent steps, regardless of layer count
+        const history = get().anomalyHistory;
+        const last = history[history.length - 1];
+        // Layer events share one reading. Replace the current step; do not
+        // advance time 24 times on a 24-layer model, including old replays.
+        const anomalyHistory = last?.step === point.step
+          ? [...history.slice(0, -1), point]
+          : last && point.step < last.step
+            ? history
+            : [...history, point].slice(-HISTORY_CAP);
         set({ anomalyLatest, anomalyHistory });
         break;
       }

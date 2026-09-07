@@ -76,6 +76,10 @@ def step_events(trace: dict, step: int, n_layer: int) -> Iterator[Event]:
                 "layer": i,
                 "zeta_proxy": layer["zeta_proxy"],
                 "flagged": layer["flagged"],
+                "spectral_gap": layer.get("spectral_gap"),
+                "calibrated": layer.get("calibrated"),
+                "threshold": layer.get("threshold"),
+                "calibration_scope": layer.get("calibration_scope"),
                 "source": "unitarity-lab",
             },
         )

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InsideAI — Real-Time Transformer Visualization",
+  title: "InsideAI — Model Observatory",
   description:
     "Watch a real transformer process your prompt: tokenization, embeddings, attention, MLP activations, logits and sampling — streamed live from the model.",
 };
