@@ -68,3 +68,16 @@ calibration progress. Resolve the new clone's VAR packaging mismatch before
 upgrading its passive hook, then establish separate corrected prefill/decode
 baselines. Broaden the grounded set with independently scored errors before
 testing BOCPD-triggered or layer-targeted interventions.
+
+## Published review branches and dependency follow-up
+
+- InsideAI loader/capture changes: https://github.com/holeyfield33-art/Insideai/pull/8
+- Spectral fix and controlled experiments: https://github.com/holeyfield33-art/unitarity-lab/pull/22
+- VAR namespace fix: https://github.com/holeyfield33-art/VAR/pull/6
+
+The namespace mismatch has been resolved in the isolated experiment environment
+using the VAR PR's wheel. Twenty passive-hook/reference tests and fifteen VAR
+detector/distribution tests passed. The live backend still uses its existing
+dependency and calibration state. VAR's default calibration needs 100 readings;
+our 32-step capture alone is insufficient. Establish new, phase-separated
+calibration datasets before evaluating intervention decisions.
