@@ -26,6 +26,7 @@ Supported families:
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -107,19 +108,30 @@ class TransformerEngine:
     def load(self) -> None:
         t0 = time.time()
         torch.set_num_threads(settings.torch_threads)
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         dtype = {"bfloat16": torch.bfloat16, "float16": torch.float16}.get(
             settings.dtype, torch.float32
         )
+        # A local GGUF file (e.g. already pulled by Ollama/llama.cpp) is
+        # loaded from its containing directory; transformers resolves
+        # gguf_file relative to that path and needs no other repo files —
+        # it reconstructs both config and tokenizer from GGUF metadata.
+        if settings.gguf_file:
+            source = os.path.dirname(settings.gguf_file)
+            gguf_kwargs = {"gguf_file": os.path.basename(settings.gguf_file)}
+        else:
+            source = self.model_name
+            gguf_kwargs = {}
+        self.tokenizer = AutoTokenizer.from_pretrained(source, **gguf_kwargs)
         # eager attention is required: sdpa/flash kernels never materialize the
         # attention matrix, so output_attentions would come back empty.
         self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_name,
+            source,
             output_attentions=True,
             output_hidden_states=True,
             attn_implementation="eager",
             dtype=dtype,
             low_cpu_mem_usage=True,
+            **gguf_kwargs,
         )
         self.model.to(self.device)
         self.model.eval()

@@ -29,6 +29,14 @@ class Settings:
     # small *instruct* model so answers are actually useful; set
     # INSIDEAI_MODEL=distilgpt2 for the fastest possible boot.
     model_name: str = os.getenv("INSIDEAI_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
+    # Load weights from a local GGUF file instead of downloading model_name
+    # from the Hub — e.g. a model already pulled by Ollama or llama.cpp.
+    # transformers dequantizes it into a real nn.Module at load time, so
+    # every hook/introspection path below works unmodified. model_name is
+    # still used as the display label. Only architectures transformers'
+    # GGUF loader supports will work (gguf_file, not the containing repo,
+    # decides that — see transformers.integrations.ggml.GGUF_CONFIG_MAPPING).
+    gguf_file: str = os.getenv("INSIDEAI_GGUF_FILE", "").strip()
     device: str = os.getenv("INSIDEAI_DEVICE", "cpu")
     # bfloat16 halves RAM (a 0.5B model: ~2GB fp32 -> ~1GB). On RAM-starved
     # machines fp32 gets paged out and inference turns into a page-fault storm.
